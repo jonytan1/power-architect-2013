@@ -4,7 +4,6 @@
 	<classpathentry kind="src" path="jdbc_drivers"/>
 	<classpathentry kind="src" path="ext-tools-home/resgen/src"/>
 	<classpathentry kind="src" path="example_code"/>
-	<classpathentry kind="src" path="generated"/>
 	<classpathentry kind="src" path="src/main/java"/>
 	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="lib" path="buildlib/ant.jar"/>
@@ -35,7 +34,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="var" path="JRE_LIB"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/sqlpower-library"/>
 	<classpathentry kind="lib" path="/finance/WebRoot/WEB-INF/lib/log4j-1.2.15.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/sqlpower-library2013"/>
 	<classpathentry kind="output" path="eclipse-bin"/>
 </classpath>
