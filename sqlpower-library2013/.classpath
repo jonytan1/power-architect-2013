@@ -40,5 +40,5 @@
 	<classpathentry exported="true" kind="lib" path="lib/main/junit-3.8.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/main/commons-httpclient-3.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/main/commons-io-1.4.jar"/>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="output" path="build"/>
 </classpath>
