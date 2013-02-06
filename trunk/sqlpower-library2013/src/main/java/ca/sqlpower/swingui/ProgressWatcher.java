@@ -239,7 +239,7 @@ public class ProgressWatcher implements ActionListener {
             timer.stop();
             logger.debug("did the timer thread stop???"); //$NON-NLS-1$
             
-            finishedAction.run();
+            if ( finishedAction != null ) finishedAction.run();
         }
     }
 
