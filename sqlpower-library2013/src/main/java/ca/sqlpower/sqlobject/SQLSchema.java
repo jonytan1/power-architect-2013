@@ -143,6 +143,7 @@ public class SQLSchema extends SQLObject {
         setName(s.getName());
         setNativeTerm(s.getNativeTerm());
         setPhysicalName(s.getPhysicalName());
+        setLogicalName(s.getLogicalName());
     }
 
 	public SQLTable findTableByName(String tableName) throws SQLObjectException {

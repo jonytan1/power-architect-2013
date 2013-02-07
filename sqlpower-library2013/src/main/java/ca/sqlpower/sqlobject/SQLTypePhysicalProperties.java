@@ -155,6 +155,7 @@ public class SQLTypePhysicalProperties extends SQLObject implements SQLCheckCons
     		target.begin("Matching properties");
     		target.setName(source.getName());
     		target.setPhysicalName(source.getPhysicalName());
+    		target.setLogicalName(source.getLogicalName());
     		target.setPrecision(source.getPrecision());
     		target.setPrecisionType(source.getPrecisionType());
     		target.setScale(source.getScale());

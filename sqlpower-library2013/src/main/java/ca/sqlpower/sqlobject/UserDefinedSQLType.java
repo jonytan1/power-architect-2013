@@ -825,6 +825,7 @@ public class UserDefinedSQLType extends SQLObject implements SQLTypePhysicalProp
 			target.setUpstreamType(source.getUpstreamType());
 			target.setName(source.getName());
 			target.setPhysicalName(source.getPhysicalName());
+			target.setLogicalName(source.getLogicalName());
 			// Don't use getters as they will refer to the upstreamType if the
 			// values are null
 			target.setMyAutoIncrement(source.myAutoIncrement);

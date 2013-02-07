@@ -1043,6 +1043,7 @@ public class SQLIndex extends SQLObject {
         index.setFilterCondition(source.getFilterCondition());
         index.setQualifier(source.getQualifier());
         index.setPhysicalName(source.getPhysicalName());
+        index.setLogicalName(source.getLogicalName());
         index.setClustered(source.isClustered());
         for (Map.Entry<Class<? extends SQLObject>, Throwable> inaccessibleReason : source.getChildrenInaccessibleReasons().entrySet()) {
         	index.setChildrenInaccessibleReason(inaccessibleReason.getValue(), inaccessibleReason.getKey(), false);

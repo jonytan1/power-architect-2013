@@ -112,6 +112,7 @@ public class SQLCatalog extends SQLObject {
         setName(c.getName());
         setNativeTerm(c.getNativeTerm());
         setPhysicalName(c.getPhysicalName());
+        setLogicalName(c.getLogicalName());
     }
 
 	protected SQLTable getTableByName(String tableName) throws SQLObjectException {
