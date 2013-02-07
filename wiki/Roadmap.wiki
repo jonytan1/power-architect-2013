@@ -1,0 +1,9 @@
+#labels Raodmap
+==1.0.7==
+ * Save/Load physical name into/from Microsoft SQL Server Database
+ * Support Simplified Chinese
+ * Show non-nullable info
+
+==Next==
+ * Support multiple schema
+ * Support View etc
