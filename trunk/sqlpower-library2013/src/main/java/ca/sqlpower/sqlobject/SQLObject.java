@@ -95,8 +95,14 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
 	 * The name used for this object in a physical database system. This name may have
 	 * to be altered to fit the naming constraints of a particular system, in terms
 	 * of length, case, allowable characters, and other requirements.
+	 * Since v1.0.7, it is same to name.
 	 */
 	private String physicalName;
+
+	/**
+	 * The name used for this object in bussiness. Since v1.0.7. 
+	 */
+	private String logicalName;
 
 	/**
 	 * The map that hold the client properties of this object. Don't modify the
@@ -588,6 +594,18 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
     public Map<Class<? extends SQLObject>, Throwable> getChildrenInaccessibleReasons() {
     	return Collections.unmodifiableMap(childrenInaccessibleReason);
     }
+
+    /**
+     * When logicalName is null, return the name.
+     * @return
+     */
+	public String getLogicalName() {
+		return ( logicalName == null ? getName() : logicalName );
+	}
+
+	public void setLogicalName(String logicalName) {
+		this.logicalName = logicalName;
+	}
 
 	/**
 	 * This setter will take in a Throwable to set the inaccessible reason to,
