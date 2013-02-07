@@ -24,6 +24,7 @@ import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -122,9 +123,10 @@ public class DBTreeCellRenderer extends DefaultTreeCellRenderer {
 			
 		    SQLTable table = (SQLTable) value;
             if ((table).getObjectType() != null) {
-			    setText((table).getName()+" ("+(table).getObjectType()+")"); //$NON-NLS-1$ //$NON-NLS-2$
+            	//getPhysicalName ? getName
+			    setText((table).getPhysicalName()+" ("+(table).getObjectType()+")"); //$NON-NLS-1$ //$NON-NLS-2$
 			} else {
-			    setText((table).getName());
+			    setText((table).getPhysicalName());
 			}
 		} else if (value instanceof SQLRelationship) {
 		    setIcon(EXPORTED_KEY_ICON);
@@ -248,6 +250,8 @@ public class DBTreeCellRenderer extends DefaultTreeCellRenderer {
             fullTag.append(" ]"); //$NON-NLS-1$
             setText(getText() + fullTag.toString());
         }
+        
+        if ( col.getNullable() == DatabaseMetaData.columnNoNulls ) setText(getText() + " [ M ]");
     }
 
     /**

@@ -626,7 +626,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                     if (column.getPhysicalName() != null && !column.getPhysicalName().trim().equals("")) {
                         discoverSequenceNamePattern(column.getPhysicalName());
                     } else {
-                        discoverSequenceNamePattern(column.getName());
+                        discoverSequenceNamePattern(column.getLogicalName());
                     }
                     syncSequenceName();
                 } else {
@@ -705,7 +705,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                     if (selection instanceof SQLColumn) {
                         SQLColumn sourceColumn = (SQLColumn) selection;
                         colSourceButton.setText(DDLUtils.toQualifiedName(
-                                sourceColumn.getParent()) + "." + sourceColumn.getName());
+                                sourceColumn.getParent()) + "." + sourceColumn.getPhysicalName());
                     } else {
                         colSourceButton.setText(Messages.getString("ColumnEditPanel.noneSpecified"));
                     }
@@ -776,10 +776,10 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
             colSourceTree.setSelectionPath(new TreePath(model.getPathToNode(sourceColumn)));
             colSourceButton.setText(
                     DDLUtils.toQualifiedName(
-                            sourceColumn.getParent()) + "." + sourceColumn.getName());
+                            sourceColumn.getParent()) + "." + sourceColumn.getPhysicalName());
         }
         
-        updateComponent(colLogicalName, col.getName());
+        updateComponent(colLogicalName, col.getLogicalName());
         updateComponent(colPhysicalName, col.getPhysicalName());
         
         updateComponent(colType, col.getUserDefinedSQLType().getUpstreamType());
@@ -812,7 +812,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         if (col.getPhysicalName() != null && !col.getPhysicalName().trim().equals("")) {
             discoverSequenceNamePattern(col.getPhysicalName());
         } else {
-            discoverSequenceNamePattern(col.getName());
+            discoverSequenceNamePattern(col.getLogicalName());
         }
     }
 
@@ -986,7 +986,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                     if (colLogicalName.getText().trim().length() == 0) {
                         errors.add(Messages.getString("ColumnEditPanel.columnNameRequired")); //$NON-NLS-1$
                     } else {
-                        column.setName(colLogicalName.getText());
+                        column.setLogicalName(colLogicalName.getText());
                     }
                 }
                 if (componentEnabledMap.get(colType).isSelected()) {
@@ -1265,7 +1265,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
     public void propertyChanged(PropertyChangeEvent e) {
         String property = e.getPropertyName();
         if (columns.contains(e.getSource())) {
-            if (property.equals("name")) {
+            if (property.equals("logicalName")) {
                 DataEntryPanelChangeUtil.incomingChange(colLogicalName, e);
             } else if (property.equals("physicalName")) {                
                 DataEntryPanelChangeUtil.incomingChange(colPhysicalName, e);
