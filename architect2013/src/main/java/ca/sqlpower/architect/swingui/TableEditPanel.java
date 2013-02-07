@@ -116,7 +116,7 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 
     private void editTable(SQLTable t) {
 		table = t;
-		logicalName.setText(t.getName());
+		logicalName.setText(t.getLogicalName());
 		physicalName.setText(t.getPhysicalName());
         SQLIndex primaryKeyIndex = t.getPrimaryKeyIndex();
         if (primaryKeyIndex == null) {
@@ -155,7 +155,7 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 	        }
 
 	        table.setPhysicalName(physicalName.getText());
-	        table.setName(logicalName.getText());
+	        table.setLogicalName(logicalName.getText());
 	        table.setRemarks(remarks.getText());   
 
 	        if (tablePane != null) {

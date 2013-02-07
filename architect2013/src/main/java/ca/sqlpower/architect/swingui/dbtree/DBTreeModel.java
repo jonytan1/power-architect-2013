@@ -730,7 +730,9 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
 			public void run() {
 				Iterator<TreeModelListener> it = treeModelListeners.iterator();
 				while (it.hasNext()) {
-					it.next().treeNodesChanged(ev);
+					TreeModelListener tml = it.next();
+					tml.treeNodesChanged(ev);
+					//it.next().treeNodesChanged(ev);
 				}
 			}
 		};

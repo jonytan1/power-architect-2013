@@ -1453,7 +1453,8 @@ public class SwingUIProjectLoader extends ProjectLoader {
 
         // properties of all SQLObject types
         propNames.put("physicalName", o.getPhysicalName()); //$NON-NLS-1$
-        propNames.put("name", o.getName()); // note: there was no name attrib for SQLDatabase, SQLRelationship.ColumnMapping, and SQLExceptionNode //$NON-NLS-1$
+        propNames.put("name", o.getPhysicalName());
+        propNames.put("logicalName", o.getLogicalName());
         propNames.put("UUID", o.getUUID());
         
         if (!o.getChildrenInaccessibleReasons().isEmpty()) {
