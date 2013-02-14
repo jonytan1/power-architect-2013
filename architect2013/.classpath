@@ -31,10 +31,13 @@
 	<classpathentry kind="lib" path="lib/kettle-engine-3.2.2.jar"/>
 	<classpathentry kind="lib" path="lib/kettle-core-3.2.2.jar"/>
 	<classpathentry kind="lib" path="lib/kettle-db-3.2.2.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="var" path="JRE_LIB"/>
 	<classpathentry kind="lib" path="/finance/WebRoot/WEB-INF/lib/log4j-1.2.15.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/sqlpower-library2013"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="buildlib/sqlpower_library-apt.jar"/>
+	<classpathentry kind="lib" path="buildlib/sqlpower_library-tests.jar"/>
+	<classpathentry kind="lib" path="buildlib/sqlpower_library.jar"/>
 	<classpathentry kind="output" path="eclipse-bin"/>
 </classpath>

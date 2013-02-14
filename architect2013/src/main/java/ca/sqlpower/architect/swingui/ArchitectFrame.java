@@ -650,8 +650,8 @@ public class ArchitectFrame extends JFrame {
         newProjectAction.putValue(AbstractAction.ACCELERATOR_KEY,
                 KeyStroke.getKeyStroke(KeyEvent.VK_N, accelMask));
         
-        newWindowAction = new AbstractAction("New Window",
-                SPSUtils.createIcon("new_window", "New Window",
+        newWindowAction = new AbstractAction(Messages.getString("ArchitectFrame.newWindowName"),
+                SPSUtils.createIcon("new_window", Messages.getString("ArchitectFrame.newWindowDescription"),
                         sprefs.getInt(ArchitectSwingUserSettings.ICON_SIZE, ArchitectSwingSessionContext.ICON_SIZE))) {
             public void actionPerformed(ActionEvent e) {
                 try {
@@ -674,7 +674,7 @@ public class ArchitectFrame extends JFrame {
                 }
             }
         };
-        newWindowAction.putValue(AbstractAction.SHORT_DESCRIPTION, "New Window");
+        newWindowAction.putValue(AbstractAction.SHORT_DESCRIPTION, Messages.getString("ArchitectFrame.newWindowDescription"));
         newWindowAction.putValue(AbstractAction.ACCELERATOR_KEY,
                 KeyStroke.getKeyStroke(KeyEvent.VK_N, accelMask+ActionEvent.SHIFT_MASK));
         
@@ -706,10 +706,10 @@ public class ArchitectFrame extends JFrame {
             }
         };
         saveProjectAsAction.putValue(AbstractAction.SHORT_DESCRIPTION, Messages.getString("ArchitectFrame.saveProjectAsActionDescription")); //$NON-NLS-1$
-        
-        saveAllProjectsAction = new AbstractAction("Save All Projects",
+
+        saveAllProjectsAction = new AbstractAction(Messages.getString("ArchitectFrame.saveAllProjectsName"),
                 SPSUtils.createIcon("save_all", //$NON-NLS-1$
-                        "Save All Projects",
+                		Messages.getString("ArchitectFrame.saveAllProjectsDescription"),
                         sprefs.getInt(ArchitectSwingUserSettings.ICON_SIZE, ArchitectSwingSessionContext.ICON_SIZE))) {
             public void actionPerformed(ActionEvent e) {
                 for (ArchitectSwingSession session : sessions) {

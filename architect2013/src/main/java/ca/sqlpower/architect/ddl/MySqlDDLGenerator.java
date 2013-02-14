@@ -477,6 +477,14 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
         def.append(columnNullability(c));
         
+		String logicalName = c.getLogicalName();
+	    if (logicalName != null) {
+	    	if (!(c.getName().equals(logicalName))){
+	    		def.append(" COMMENT '");
+	    		def.append(logicalName.replaceAll("'", "''"));
+	    		def.append("'");
+	    	}
+	    }
         logger.debug("column definition "+ def.toString());
         return def.toString();
     }
@@ -644,17 +652,14 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
 	@Override
 	public void addComment(SQLTable t, boolean includeColumns) {
-	    if (t.getRemarks() != null && t.getRemarks().trim().length() > 0) {
-        	print("\nALTER TABLE ");
-        	print(toQualifiedName(t));
-        	print(" COMMENT '");     		
-        	print(t.getRemarks().replaceAll("'", "''"));
-        	print("'");
-        	endStatement(StatementType.ALTER, t);
+		String logicalName = t.getLogicalName();
+	    if (logicalName != null) {
+	    	if (!(t.getName().equals(logicalName))){
+	        	print(" COMMENT '");     		
+	        	print(logicalName.replaceAll("'", "''"));
+	        	print("'");
+	    	}
 	    }
-        if (includeColumns) {
-            addColumnComments(t);
-        }
 	}
 	
 	@Override
@@ -673,6 +678,55 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 	    }
 	}
 
+	@Override
+	public void addTable(SQLTable t) throws SQLException, SQLObjectException {
+	       Map<String, SQLObject> colNameMap = new HashMap<String, SQLObject>();  // for detecting duplicate column names
+	        // generate a new physical name if necessary
+	        createPhysicalName(topLevelNames,t); // also adds generated physical name to the map
+	        print("\nCREATE TABLE ");
+	        print( toQualifiedName(t) );
+	        println(" (");
+	        boolean firstCol = true;
+	        
+	        List<SQLColumn> columns = t.getColumns();
+	        
+	        for (SQLColumn c : columns) {
+	            if (!firstCol) println(",");
+	            print("                ");
+
+	            print(columnDefinition(c,colNameMap));
+
+	            firstCol = false;
+	        }
+
+	        SQLIndex pk = t.getPrimaryKeyIndex();
+	        if (pk.getChildCount() > 0) {
+	            print(",\n");
+	            print("                ");
+	            writePKConstraintClause(pk);
+	        }
+	        
+	        for (SQLColumn c : columns) {
+	            UserDefinedSQLType type = c.getUserDefinedSQLType();
+	            List<SQLCheckConstraint> checkConstraints;
+	            SQLTypeConstraint constraintType = type.getConstraintType(getPlatformName());
+	            if (constraintType == null) {
+	                constraintType = type.getDefaultPhysicalProperties().getConstraintType();
+	                checkConstraints = type.getDefaultPhysicalProperties().getCheckConstraints();
+	            } else {
+	                checkConstraints = type.getCheckConstraints(getPlatformName());
+	            }
+	            
+	            if (constraintType == SQLTypeConstraint.CHECK) {
+	                print(",\n");
+	                print(columnCheckConstraint(c, checkConstraints));
+	            }
+	        }
+	        print("\n)");
+	        addComment(t,false);
+	        endStatement(StatementType.CREATE, t);
+	}
+	
     @Override
     public void addColumn(SQLColumn c) {
         Map<String, SQLObject> colNameMap = new HashMap<String, SQLObject>();

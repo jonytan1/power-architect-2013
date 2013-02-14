@@ -23,16 +23,21 @@ import java.awt.event.ActionEvent;
 
 import ca.sqlpower.architect.swingui.ArchitectFrame;
 import ca.sqlpower.architect.swingui.ArchitectSwingSession;
+import ca.sqlpower.architect.swingui.Messages;
 import ca.sqlpower.architect.swingui.action.AbstractArchitectAction;
 
 public class OLAPSchemaManagerAction extends AbstractArchitectAction {
     
     public OLAPSchemaManagerAction(ArchitectSwingSession session) {
-        super(session, "OLAP Schema Manager...", "OLAP Schema Manager");
+        super(session, 
+        		Messages.getString("OLAP.SchemaManagerActionName"), 
+        		Messages.getString("OLAP.SchemaManagerDescription"));
     }
     
     public OLAPSchemaManagerAction(ArchitectFrame frame) {
-        super(frame, "OLAP Schema Manager...", "OLAP Schema Manager");
+        super(frame,  
+        		Messages.getString("OLAP.SchemaManagerActionName"), 
+        		Messages.getString("OLAP.SchemaManagerDescription"));
     }
 
     public void actionPerformed(ActionEvent e) {
