@@ -1,4 +1,4 @@
-<project name="sqlpower_library" default="dist" basedir=".">
+<project name="sqlpower_library" default="jar" basedir=".">
 
 	<!-- $Id$ -->
 	<property name="dist.dir" value="dist"/>
@@ -18,6 +18,7 @@
 	<property name="tests-resources" value="src/test/resources"/>
 	<property name="reports.dir" value="${dist.dir}/reports"/>
 	<property name="ca.sqlpower.SKIP_DODGY_TESTS" value="false"/>
+	<property name="encoding"      value="UTF-8"/>
 	<!--
 		Set the format of the findbugs report to xml by default
 	-->
@@ -69,7 +70,7 @@
 	
 	<target name="compile" depends="init">
 		
-		<javac srcdir="${src}" destdir="${build}" classpathref="compile.classpath" debug="true"/>
+		<javac srcdir="${src}" destdir="${build}" encoding="${encoding}" classpathref="compile.classpath" debug="true"/>
 		
 		<copy flatten="false" todir="${build}">
 			<fileset dir="${resources}">
@@ -86,12 +87,14 @@
 				srcdir="${src}" 
 				destdir="${build}" 
 				classpathref="compile.classpath" 
+				encoding="${encoding}"
 				debug="true"/>
 		
 		<javac 
 				srcdir="${src.apt}" 
 				destdir="${build.apt}" 
 				classpathref="apt.classpath" 
+				encoding="${encoding}"
 				debug="true"/>
 		
 		<apt srcdir="${src}"
@@ -99,6 +102,7 @@
 			classpathref="apt.classpath"
 			debug="true"
 			compile="true"
+			encoding="${encoding}"
 			factory="ca.sqlpower.object.annotation.SPAnnotationProcessorFactory"
 			preprocessdir="${src}">
 		</apt>
@@ -120,7 +124,7 @@
 	
 	<target name="compile-tests" depends="compile-with-annotations">
 		
-		<javac srcdir="${tests}" destdir="${build.tests}" classpathref="test.classpath" debug="true"/>
+		<javac srcdir="${tests}" encoding="${encoding}" destdir="${build.tests}" classpathref="test.classpath" debug="true"/>
 		
 		<copy flatten="false" todir="${build.tests}">
 			<fileset dir="${tests-resources}">
@@ -204,6 +208,7 @@
 		<javadoc sourcepath="${src}" destdir="${dist.dir}/doc/api"
 			packagenames="ca.sqlpower.*"
 			maxmemory="100m"
+			encoding="${encoding}"
 			windowtitle="ca.sqlpower.* SQL Power Library"
 			Version="true" Author="true" Use="true"
 			Overview="html/overview.html"
@@ -224,6 +229,7 @@
 		<javadoc sourcepath="${src}" destdir="${dist.dir}/doc/api"
 			packagenames="ca.sqlpower.*"
 			maxmemory="100m"
+			encoding="${encoding}"
 			windowtitle="ca.sqlpower.* SQL Power Library"
 			Version="true" Author="true" Use="true"
 			Overview="html/overview.html"
@@ -302,7 +308,7 @@
 		<taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask"
 			classpath="${pmd.jar}"/>
 		<property name="cpd-results" value="${reports.dir}/pmd-cpd.xml"/>
-		<cpd encoding="UTF-8" minimumTokenCount="120" format="xml" outputfile="${cpd-results}">
+		<cpd encoding="${encoding}" minimumTokenCount="120" format="xml" outputfile="${cpd-results}">
 			<fileset dir="${src}">
 				<include name="ca/sqlpower/**/*.java"/>
 				<exclude name="generated/**.java"/>

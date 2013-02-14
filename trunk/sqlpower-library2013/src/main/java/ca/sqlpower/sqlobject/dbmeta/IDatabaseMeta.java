@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2008, SQL Power Group Inc.
  *
  * This file is part of SQL Power Library.
  *

@@ -1077,7 +1077,9 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 	@Transient @Accessor(isInteresting=true)
 	public int getNullable() {
 		logger.debug(userDefinedSQLType);
-		return userDefinedSQLType.getNullability();
+		Integer nullable = userDefinedSQLType.getNullability();
+		if ( nullable == null ) return DatabaseMetaData.columnNullableUnknown;
+		return nullable.intValue();
 	}
 
 	/**

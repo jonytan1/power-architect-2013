@@ -600,7 +600,7 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
      * @return
      */
 	public String getLogicalName() {
-		return ( logicalName == null ? getName() : logicalName );
+		return ( ( logicalName == null || logicalName.length() < 1 ) ? getName() : logicalName );
 	}
 
 	public void setLogicalName(String logicalName) {

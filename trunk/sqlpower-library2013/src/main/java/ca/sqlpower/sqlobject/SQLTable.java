@@ -303,7 +303,7 @@ public class SQLTable extends SQLObject {
 		populateImportedKeys();
         SQLIndex newPKIndex = new SQLIndex();
         SQLTable t = new SQLTable(parent, getName(), remarks, "TABLE", true, newPKIndex);
-        t.setLogicalName(this.getLogicalName() + "-111");
+        t.setLogicalName(this.getLogicalName());
 		for (Map.Entry<Class<? extends SQLObject>, Throwable> inaccessibleReason : getChildrenInaccessibleReasons().entrySet()) {
         	t.setChildrenInaccessibleReason(inaccessibleReason.getValue(), inaccessibleReason.getKey(), false);
         }
