@@ -56,6 +56,7 @@ import ca.sqlpower.architect.swingui.olap.UsageComponent;
 import ca.sqlpower.architect.swingui.olap.VirtualCubePane;
 import ca.sqlpower.swingui.DataEntryPanelBuilder;
 import ca.sqlpower.swingui.SPSUtils;
+import ca.sqlpower.architect.swingui.Messages;
 
 public class ImportSchemaAction extends AbstractArchitectAction {
 
@@ -78,11 +79,11 @@ public class ImportSchemaAction extends AbstractArchitectAction {
     private static final Point INITIAL_POINT = new Point(50, 50);
     
     public ImportSchemaAction(ArchitectSwingSession session) {
-        super(session, "Import Schema...", "Imports an OLAP schema"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        super(session, Messages.getString("OLAP.ImportSchemaName"), Messages.getString("OLAP.ImportSchemaDescription")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
     
     public ImportSchemaAction(ArchitectFrame frame) {
-        super(frame, "Import Schema...", "Imports an OLAP schema");
+        super(frame, Messages.getString("OLAP.ImportSchemaName"), Messages.getString("OLAP.ImportSchemaDescription"));
     }
 
     public void actionPerformed(ActionEvent e) {

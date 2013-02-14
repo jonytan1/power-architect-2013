@@ -276,7 +276,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 	 */
     @Override
 	public String getStatementTerminator() {
-        return "";
+        return "\nGO\n";
 	}
 
     @Override
@@ -403,11 +403,17 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 		// "write-only" comments.
 		// So we only write a SQL comment with the table's comment here
 
-		if (t.getRemarks() != null && t.getRemarks().trim().length() > 0) {
-			print("\n-- Comment for table [" + t.getPhysicalName() + "]: ");
-			print(t.getRemarks().replaceAll(REGEX_CRLF, "\n-- "));
-			endStatement(StatementType.COMMENT, t);
-
+		if (t.getLogicalName() != null && t.getLogicalName().trim().length() > 0) {
+		      String schema = getTargetSchema();
+		      String logicalName = t.getLogicalName();
+		      if (schema != null && schema.length() > 0 ) {
+		        if (!(t.getName().equals(logicalName))){
+		          print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
+		              logicalName + "','user','" + 
+		              schema + "','table','" + t.getName()+"'");
+		          endStatement(StatementType.COMMENT, t);
+		        }
+		      }
 			if (includeColumns) {
 				addColumnComments(t);
 			}
@@ -416,13 +422,19 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 
 	@Override
     public void addComment(SQLColumn c) {
-        if (c.getRemarks() == null || c.getRemarks().trim().length() == 0) return;
+        if (c.getLogicalName() == null || c.getLogicalName().trim().length() == 0) return;
 
-        print("\n-- Comment for column [");
-        print(c.getName());
-        print("]: ");
-        print(c.getRemarks().replaceAll(REGEX_CRLF, "\n-- "));
-        endStatement(StatementType.COMMENT, c);
+        String schema = getTargetSchema();
+        String tableName = c.getParent().getPhysicalName();
+        String logicalName = c.getLogicalName();
+        if (schema != null && schema.length() > 0 ) {
+          if (!(c.getPhysicalName().equals(logicalName))){
+            print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
+                logicalName.replaceAll("'", "''") + "','user','" + 
+                schema + "','table','" + tableName+"','column','" + c.getPhysicalName() + "'");
+            endStatement(StatementType.COMMENT, c);
+          }
+        }
     }
 
     @Override

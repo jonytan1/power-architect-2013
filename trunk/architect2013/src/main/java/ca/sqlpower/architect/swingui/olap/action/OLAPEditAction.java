@@ -30,6 +30,7 @@ import ca.sqlpower.architect.olap.MondrianModel.Schema;
 import ca.sqlpower.architect.swingui.ASUtils;
 import ca.sqlpower.architect.swingui.ArchitectFrame;
 import ca.sqlpower.architect.swingui.ArchitectSwingSession;
+import ca.sqlpower.architect.swingui.Messages;
 import ca.sqlpower.architect.swingui.action.AbstractArchitectAction;
 import ca.sqlpower.architect.swingui.olap.OLAPEditSession;
 import ca.sqlpower.architect.swingui.olap.SchemaEditPanel;
@@ -47,13 +48,15 @@ public class OLAPEditAction extends AbstractArchitectAction {
     private final boolean newSchema;
     
     public OLAPEditAction(ArchitectSwingSession session, OLAPSession olapSession) {
-        super(session, olapSession == null ? "New Schema..." : olapSession.getSchema().getName(), "Edit OLAP schema");
+        super(session, olapSession == null ? Messages.getString("OLAP.NewSchemaActionName") : olapSession.getSchema().getName(), 
+        		olapSession == null ? Messages.getString("OLAP.NewSchemaDescription") : Messages.getString("OLAP.EditSchemaDescription"));
         this.olapSession = olapSession;
         newSchema = olapSession == null; 
     }
     
     public OLAPEditAction(ArchitectFrame frame, OLAPSession olapSession) {
-        super(frame, olapSession == null ? "New Schema..." : olapSession.getSchema().getName(), "Edit OLAP schema");
+        super(frame, olapSession == null ? "New Schema2..." : olapSession.getSchema().getName(), 
+        		olapSession == null ? Messages.getString("OLAP.NewSchemaDescription") : Messages.getString("OLAP.EditSchemaDescription"));
         this.olapSession = olapSession;
         newSchema = olapSession == null; 
     }

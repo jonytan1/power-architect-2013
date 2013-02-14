@@ -75,6 +75,8 @@
 	
 	<property name="only.copy.sqlpower.library" value="false"/>
 	
+	<property name="encoding"      value="UTF-8"/>
+	
 	<path id="runtime.classpath"
 			description="All the runtime dependencies of the Architect code">
 		<fileset dir="${lib}">
@@ -238,7 +240,7 @@
 		<mkdir dir="${build_tmp}"/>
 		
 		<!-- get the version number from source code ArchitectUtils -->
-		<javac srcdir="${src}" destdir="${build}" classpathref="compile.classpath" includes="ca/sqlpower/architect/antbuild/ArchitectVersionTask.java" debug="true"/>
+		<javac srcdir="${src}" destdir="${build}" encoding="${encoding}" classpathref="compile.classpath" includes="ca/sqlpower/architect/antbuild/ArchitectVersionTask.java" debug="true"/>
 		<taskdef name="genVersion"
 					classname="ca.sqlpower.architect.antbuild.ArchitectVersionTask"
 			        classpath="${build}"/>
@@ -392,7 +394,7 @@
 		<taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask"
 			classpath="${pmd.jar}"/>
 		<property name="cpd-results" value="${reports}/cpd-ant-results.xml"/>
-		<cpd encoding="UTF-8" minimumTokenCount="120" format="xml" outputfile="${cpd-results}">
+		<cpd encoding="${encoding}" minimumTokenCount="120" format="xml" outputfile="${cpd-results}">
 			<fileset dir="${src}">
 				<include name="**/*.java"/>
 				<exclude name="generated/**.java"/>
@@ -455,13 +457,14 @@
 	<!-- Compiles the application source files -->
 	<target name="compile" depends="init, copyfiles, build.sqlpower.library, copy.sqlpower.library">
 	   	
-		<javac srcdir="${src}" destdir="${build}" classpathref="compile.classpath" debug="true"/>
+		<javac srcdir="${src}" destdir="${build}" encoding="${encoding}" classpathref="compile.classpath" debug="true"/>
 		
 		<apt srcdir="${src}"
             destdir="${build_tmp}"
             classpathref="apt.classpath"
             debug="true"
             compile="true"
+            encoding="${encoding}"
             factory="ca.sqlpower.object.annotation.SPAnnotationProcessorFactory"
             preprocessdir="${generated}">
         </apt>
@@ -484,6 +487,7 @@
 		<mkdir dir="${build.tests}"/>
 		<javac srcdir="regress" destdir="${build.tests}"
 			classpathref="test.classpath"
+			encoding="${encoding}"
 			debug="true"/>
 	</target>
 
@@ -493,6 +497,7 @@
 		<mkdir dir="${build.examples}"/>
 		<javac srcdir="example_code" destdir="${build.examples}"
 			classpathref="test.classpath"
+			encoding="${encoding}"
 			debug="true"/>
 	</target>
 
@@ -918,6 +923,7 @@
 		<javadoc sourcepath="${src}" destdir="${dist.dir}/doc/api"
 			packagenames="ca.sqlpower.*"
 			maxmemory="100m"
+			encoding="${encoding}"
 			windowtitle="ca.sqlpower.architect.* SQL Power Architect"
 			Version="true" Author="true" Use="true"
 			Overview="html/overview.html"
@@ -940,6 +946,7 @@
 		<javadoc sourcepath="${src}" destdir="${dist.dir}/doc/api"
 			packagenames="ca.sqlpower.*"
 			maxmemory="100m"
+			encoding="${encoding}"
 			windowtitle="ca.sqlpower.architect.* SQL Power Architect"
 			Version="true" Author="true" Use="true"
 			Overview="html/overview.html"
@@ -1190,6 +1197,7 @@
 			description="Creates the osx_packaging_utils/osx_adapter.jar file (only works on OSX)">
 		<javac srcdir="osx_packaging_utils"
    			   destdir="${build}"
+   			   encoding="${encoding}"
 			   includes="ca/sqlpower/architect/swingui/OSXAdapter.java"
 			   />
 		<jar destfile="osx_packaging_utils/osx_adapter.jar"

@@ -92,22 +92,23 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
 	    public String getShortDisplayName() {
 	        
 	        if (containingChildType.isAssignableFrom(SQLColumn.class)) {
-	            return "Columns folder for " + parentTable.getName();
+	            return Messages.getString("DBTreeCellRenderer.Columns", parentTable.getName() );
 	        }
 	        
 	        if (containingChildType.isAssignableFrom(SQLIndex.class)) {
-	            return "Indices folder for " + parentTable.getName();
+	            return Messages.getString("DBTreeCellRenderer.Indices", parentTable.getName() );
 	        }
 	        
 	        if (containingChildType.isAssignableFrom(SQLRelationship.class)) {
-	            return "Exported keys folder for " + parentTable.getName();
+	            return Messages.getString("DBTreeCellRenderer.ExportedKeys", parentTable.getName() );
 	        }
 	        
 	        if (containingChildType.isAssignableFrom(SQLRelationship.SQLImportedKey.class)) {
-	            return "Imported keys folder for " + parentTable.getName();
+	            return Messages.getString("DBTreeCellRenderer.ImportedKeys", parentTable.getName() );
 	        }
 	        
-	        return containingChildType.getSimpleName() + "s folder for " + parentTable.getName();
+            return Messages.getString("DBTreeCellRenderer.ChildType", 
+            		containingChildType.getSimpleName(), parentTable.getName() );
 	    }
 
 	    public boolean isPopulated() {

@@ -980,14 +980,14 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                 }
                 
                 if (componentEnabledMap.get(colPhysicalName).isSelected()) {
-                    column.setPhysicalName(colPhysicalName.getText());
-                }                
-                if (componentEnabledMap.get(colLogicalName).isSelected()) {
-                    if (colLogicalName.getText().trim().length() == 0) {
+                    if (colPhysicalName.getText().trim().length() == 0) {
                         errors.add(Messages.getString("ColumnEditPanel.columnNameRequired")); //$NON-NLS-1$
                     } else {
-                        column.setLogicalName(colLogicalName.getText());
+                        column.setPhysicalName(colPhysicalName.getText());
                     }
+                }                
+                if (componentEnabledMap.get(colLogicalName).isSelected()) {
+                    column.setLogicalName(colLogicalName.getText());
                 }
                 if (componentEnabledMap.get(colType).isSelected()) {
                     // Set upstream type on column

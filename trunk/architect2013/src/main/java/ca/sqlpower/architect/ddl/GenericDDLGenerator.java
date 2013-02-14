@@ -582,13 +582,18 @@ public class GenericDDLGenerator implements DDLGenerator {
     public void addComment(SQLColumn c) {
         if (c.getRemarks() == null || c.getRemarks().trim().length() == 0) return;
 
-        print("COMMENT ON COLUMN ");
-        print(toQualifiedName(c.getParent()));
-        print(".");
-        print(c.getPhysicalName());
-        print(" IS '");
-        print(c.getRemarks().replaceAll("'", "''"));
-        print("'");
+        String schema = getTargetSchema();
+        String tableName = c.getParent().getName();
+        String logicalName = c.getLogicalName();
+        if (schema != null && schema.length() > 0 ) {
+          if (!(c.getPhysicalName().equals(logicalName))){
+            print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
+                logicalName.replaceAll("'", "''") + "','user','" + 
+                schema + "','table','" + tableName+"','column','" + c.getPhysicalName() + "'");
+            print(getStatementTerminator());
+          }
+        }
+
         endStatement(StatementType.COMMENT, c);
     }
 
@@ -1285,7 +1290,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 		} else {
 		    so.setPhysicalName(toIdentifier(so.getName()));
 		}
-        logger.debug("The logical name field now is: " + so.getName());
+        logger.debug("The logical name field now is: " + so.getLogicalName());
 
 		return so.getPhysicalName();
 	}

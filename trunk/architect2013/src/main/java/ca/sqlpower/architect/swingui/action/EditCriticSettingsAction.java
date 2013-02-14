@@ -40,7 +40,8 @@ public class EditCriticSettingsAction extends AbstractArchitectAction {
     private CriticSettingsPanelFactory settingsPanelFactory = new CriticSettingsPanelFactory();
     
     public EditCriticSettingsAction(ArchitectFrame frame) {
-        super(frame, "Validation Manager...", "Display the settings of the validation framework.");
+        super(frame, Messages.getString("ArchitectFrame.criticManagerActionName"), 
+        		Messages.getString("ArchitectFrame.criticManagerDescription"));
     }
 
     @Override
