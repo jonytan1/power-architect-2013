@@ -35,10 +35,10 @@ import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
 
-public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
-	private static Logger logger = Logger.getLogger(MSSQLServerDatabaseMeta.class);
+public class MySQLDatabaseMeta implements IDatabaseMeta {
+	private static Logger logger = Logger.getLogger(MySQLDatabaseMeta.class);
 
-	public MSSQLServerDatabaseMeta(){}
+	public MySQLDatabaseMeta(){}
 	
 	@Override
 	public List<SQLTable> fetchTablesWithLogicalName(DatabaseMetaData dbmd,
@@ -56,10 +56,7 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
                     "%",
                     new String[] {"TABLE", "VIEW"});
             psLogicalName = dbmd.getConnection().prepareStatement(
-                    "select CONVERT(varchar,value) from " + catalogNamePre + "sys.extended_properties a, " + catalogNamePre + "sys.tables b" 
-                      + " where a.major_id = b.object_id"
-                      + " and a.minor_id = 0"
-                      + " and b.name=?");
+                    "SHOW TABLE STATUS LIKE ?");
 
             List<SQLTable> tables = new ArrayList<SQLTable>();
             while (rs.next()) {
@@ -76,7 +73,7 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
             	psLogicalName.setString(1, newTableName);
             	rsLogicalName = psLogicalName.executeQuery();
                 if ( rsLogicalName.next() ) {
-                	newTable.setLogicalName(rsLogicalName.getString(1));
+                	newTable.setLogicalName(rsLogicalName.getString(18));
                 }
                 rsLogicalName.close();
             	
@@ -95,23 +92,9 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
 			String catalog, String schema, String table, DatabaseMetaData dbmd)
 			throws SQLException, DuplicateColumnException, SQLObjectException {
 		ResultSet rs = null;
-		
-        ResultSet rsLogicalName = null;
-        PreparedStatement psLogicalName = null;
-        String catalogNamePre = ( ( catalog != null && catalog.length() > 0 ) ? catalog + "." : "" );
-
 		final ListMultimap<String, SQLColumn> multimap = ArrayListMultimap.create();
  		try {
 			logger.debug("SQLColumn.addColumnsToTables: catalog="+catalog+"; schema="+schema);
-
-			psLogicalName = dbmd.getConnection().prepareStatement(
-		              "select CONVERT(varchar,value) from " + catalogNamePre + "sys.extended_properties a, " + catalogNamePre
-		              + "sys.tables b, " + catalogNamePre + "sys.columns c" 
-		              + " where a.major_id = c.object_id"
-		              + " and a.minor_id = c.column_id"
-		              + " and c.object_id = b.object_id"
-		              + " and b.name=? and c.name = ?");
-			
 			rs = dbmd.getColumns(catalog, schema, table, "%");
 			
 			int autoIncCol = SQL.findColumnIndex(rs, "is_autoincrement");
@@ -122,7 +105,7 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
 				
 				String tableName = rs.getString(3);
 				String colName = rs.getString(4);
-
+				
 				// work around oracle 8i bug: when table names are long and similar,
 				// getColumns() sometimes returns columns from multiple tables!
 				// XXX: should be moved to the JDBC Wrapper for Oracle
@@ -135,7 +118,7 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
 				} else {
 					logger.warn("Table name not specified in metadata.  Continuing anyway...");
 				}
-				
+
 				boolean autoIncrement;
                 if (autoIncCol > 0) {
                     autoIncrement = "yes".equalsIgnoreCase(rs.getString(autoIncCol));
@@ -159,20 +142,10 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
 											  rs.getString(13), // default value
 											  autoIncrement // isAutoIncrement
 											  );
-				col.setPhysicalName(colName);
-				logger.debug("Precision for the column " + rs.getString(4) + " is " + rs.getInt(7));
+				col.setLogicalName(rs.getString(12));
+				logger.debug("Precision for the column " + colName + " is " + rs.getInt(7));
 
-            	psLogicalName.clearParameters();
-            	psLogicalName.setString(1, table);
-            	psLogicalName.setString(2, colName);
-            	rsLogicalName = psLogicalName.executeQuery();
-                if ( rsLogicalName.next() ) {
-                	col.setLogicalName(rsLogicalName.getString(1));
-                }
-                rsLogicalName.close();
-
-
-				logger.debug("Adding column "+col.getName());
+				logger.debug("Adding column "+colName);
 				
 	        	multimap.put(table, col);
 
@@ -182,13 +155,10 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
 		} finally {
 			try {
 				if (rs != null) rs.close();
-	            if ( rsLogicalName != null ) rsLogicalName.close();
-	            if (psLogicalName != null) psLogicalName.close();
 			} catch (SQLException ex) {
 				logger.error("Couldn't close result set", ex);
 			}
 		}
-
 	}
 
 }

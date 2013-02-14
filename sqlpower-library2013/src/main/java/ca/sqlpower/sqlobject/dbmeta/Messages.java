@@ -1,6 +1,4 @@
 /*
- * Copyright (c) 2009, SQL Power Group Inc.
- *
  * This file is part of SQL Power Library.
  *
  * SQL Power Library is free software; you can redistribute it and/or modify
@@ -31,15 +29,11 @@ public class Messages {
     private Messages() {
     }
 
-    public static String getString(String key) {
-        try {
-            return RESOURCE_BUNDLE.getString(key);
-        } catch (MissingResourceException e) {
-            return '!' + key + '!';
-        }
+    public static String getString(String key) throws MissingResourceException{
+        return RESOURCE_BUNDLE.getString(key);
     }
     
-    public static String getString(String key, String ... params) {
+    public static String getString(String key, String ... params)  throws MissingResourceException{
         String message = getString(key);
         for (int i = 0; i < params.length; i++) {
             if (params[i] != null) {
