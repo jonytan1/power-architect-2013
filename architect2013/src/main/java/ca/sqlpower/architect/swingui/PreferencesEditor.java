@@ -91,7 +91,7 @@ public class PreferencesEditor {
         JPanel p = new JPanel(new BorderLayout());
         p.add(createLabelPanel(session), BorderLayout.NORTH);
         p.add(dsTypeEditor.getPanel(), BorderLayout.CENTER);
-        tp.add("Local " + Messages.getString("PreferencesEditor.jdbcDriversSection"), p); //$NON-NLS-1$
+        tp.add(Messages.getString("PreferencesEditor.Local", Messages.getString("PreferencesEditor.jdbcDriversSection")), p); //$NON-NLS-1$
     
         final DefaultColumnPanel defaultColumnPanel = new DefaultColumnPanel(session.getContext());
         tp.add(Messages.getString("PreferencesEditor.defaultColumnSection"),defaultColumnPanel);
