@@ -599,12 +599,16 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
      * When logicalName is null, return the name.
      * @return
      */
+    @Transient @Accessor
 	public String getLogicalName() {
 		return ( ( logicalName == null || logicalName.length() < 1 ) ? getName() : logicalName );
 	}
 
+    @Transient @Mutator
 	public void setLogicalName(String logicalName) {
+		String oldLogicalName = this.logicalName;
 		this.logicalName = logicalName;
+		firePropertyChange("logicalName", oldLogicalName, logicalName);
 	}
 
 	/**
