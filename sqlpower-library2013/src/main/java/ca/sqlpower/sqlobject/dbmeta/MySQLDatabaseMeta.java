@@ -110,13 +110,14 @@ public class MySQLDatabaseMeta implements IDatabaseMeta {
 				// getColumns() sometimes returns columns from multiple tables!
 				// XXX: should be moved to the JDBC Wrapper for Oracle
 				if (tableName != null) {
-					if (!tableName.equalsIgnoreCase(table)) {
+					if (table != null && !tableName.equalsIgnoreCase(table)) {
 						logger.warn("Got column "+colName+" from "+tableName
 									+" in metadata for "+table+"; not adding this column.");
 						continue;
 					}
 				} else {
 					logger.warn("Table name not specified in metadata.  Continuing anyway...");
+					continue;
 				}
 
 				boolean autoIncrement;
@@ -147,7 +148,7 @@ public class MySQLDatabaseMeta implements IDatabaseMeta {
 
 				logger.debug("Adding column "+colName);
 				
-	        	multimap.put(table, col);
+	        	multimap.put(tableName, col);
 
 			}
 			
