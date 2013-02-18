@@ -1225,7 +1225,8 @@
 			<javafileset dir="${staging.dir}" includes="jdbc/*.ini"/>
 			<extraclasspathfilelist dir="KICKME" files="jdbc"/>
 			<documenttype name="SQL Power Architect Project"
-							extensions="architect"/>
+							extensions="architect"
+                role="Editor"/>
 		</jarbundler>
 
 		<!-- XXX this is stupid. we should modify the jarbundler task to allow literal strings in the classpath -->
