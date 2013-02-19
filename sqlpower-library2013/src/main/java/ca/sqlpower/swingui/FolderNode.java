@@ -21,7 +21,6 @@ package ca.sqlpower.swingui;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import ca.sqlpower.object.AbstractSPObject;
 import ca.sqlpower.object.SPObject;
@@ -30,7 +29,6 @@ import ca.sqlpower.object.annotation.Constructor;
 import ca.sqlpower.object.annotation.ConstructorParameter;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.sqlobject.SQLObjectException;
-import ca.sqlpower.sqlobject.SQLTable;
 
 /**
  * A visual node for the tree that groups children of the table together.
