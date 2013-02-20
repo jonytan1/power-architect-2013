@@ -38,6 +38,7 @@ import ca.sqlpower.object.annotation.Transient;
  */
 public class SQLEnumeration extends SQLObject {
 	
+	private static final long serialVersionUID = 6235415051930563046L;
 	/**
 	 * {@link List} of allowed child types, which is empty since
 	 * {@link SQLEnumeration} has no children.

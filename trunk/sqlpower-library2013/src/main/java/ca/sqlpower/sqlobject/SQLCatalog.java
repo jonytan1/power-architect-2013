@@ -43,6 +43,9 @@ import ca.sqlpower.object.annotation.Transient;
  * SQLDatabase.
  */
 public class SQLCatalog extends SQLObject {
+
+	private static final long serialVersionUID = -6359881357007165422L;
+
 	private static Logger logger = Logger.getLogger(SQLCatalog.class);
 	
 	/**
@@ -111,7 +114,6 @@ public class SQLCatalog extends SQLObject {
         SQLCatalog c = (SQLCatalog) source;
         setName(c.getName());
         setNativeTerm(c.getNativeTerm());
-        setPhysicalName(c.getPhysicalName());
         setLogicalName(c.getLogicalName());
     }
 

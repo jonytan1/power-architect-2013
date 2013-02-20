@@ -42,6 +42,7 @@ import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sql.jdbcwrapper.DatabaseMetaDataDecorator;
+import ca.sqlpower.swingui.IDBTreeModelRender;
 import ca.sqlpower.util.SQLPowerUtils;
 
 import com.google.common.collect.ListMultimap;
@@ -84,8 +85,9 @@ import com.google.common.collect.ListMultimap;
  * into namespaces to ensure multiple clients who don't know about each other do
  * not end up suffering naming collisions.
  */
-public abstract class SQLObject extends AbstractSPObject implements java.io.Serializable {
+public abstract class SQLObject extends AbstractSPObject implements IDBTreeModelRender, java.io.Serializable {
 
+	private static final long serialVersionUID = -2857046544212966433L;
 	private static Logger logger = Logger.getLogger(SQLObject.class);
 	protected boolean populated = false;
 	
@@ -144,37 +146,29 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
      * @return The physical name to use for forward engineering and database
      *         comparison, or the logical name (see {@link #getName()}) if no
      *         physical name has been set.
+     *         
+     * Since 1.0.7, physical name seen as a normal property, not the equal property to "name".
      */
-	@Accessor(isInteresting=true)
+	@Accessor(isInteresting=true) 
+	@Deprecated
 	public final String getPhysicalName() {
-		if (physicalName != null) {
-			return physicalName;
-		}
-		return getName(); 
+		return physicalName;
 	}
 
     /**
      * Sets the physical identifier name to use when forward-engineering into
      * the target database and comparing with existing databases.
      * 
+     * Since 1.0.7, physical name seen as a normal property, not the equal property to "name".
      * @param argName The new physical name to use.
      */
-	@Mutator
+	@Mutator @Deprecated
 	public void setPhysicalName(String argName) {
-		String oldPhysicalName = getPhysicalName();
-		String actualOldPhysicalName = physicalName;
+		String oldPhysicalName = this.physicalName;
 		this.physicalName = argName;
-		
-		//The old physicalName returned from getPhysicalName must be the same
-		//as that returned by getPhysicalName or the persisters will fail. However,
-		//if the physical name is being set to null when it was null we do not want
-		//to fire an event.
-		if ((actualOldPhysicalName == null && argName == null)
-    			|| (actualOldPhysicalName != null && actualOldPhysicalName.equals(argName))) return;
-		
 		firePropertyChange("physicalName",oldPhysicalName,argName);
 	}
-
+	
 	/**
      * Causes this SQLObject to load its children through populateImpl (if any exist).
      * This will do nothing if the object is already populated.
@@ -848,11 +842,19 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
      *            and physical name match the physical name will be set to this
      *            one.
      */
+	/*
     protected void updatePhysicalNameToMatch(String oldName, String newName) {
-        if ((newName != null && getPhysicalName() == null) 
+        
+    	if ((newName != null && getPhysicalName() == null) 
                 || (getPhysicalName() != null && "".equals(getPhysicalName().trim())) 
                 || (oldName != null && oldName.equals(getPhysicalName()))) {
             setPhysicalName(newName);
         }
+    }
+        */
+    
+    @NonProperty
+    public String getTreeCellTitle( boolean isUsingLogicalNames){
+    	return isUsingLogicalNames ? getLogicalName() : getName();
     }
 }

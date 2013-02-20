@@ -37,6 +37,11 @@ import ca.sqlpower.object.annotation.Transient;
 public class SQLObjectRoot extends SQLObject {
 	
 	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -194123726079999335L;
+
+	/**
 	 * Defines an absolute ordering of the child types of this class.
 	 */
 	@SuppressWarnings("unchecked")

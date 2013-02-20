@@ -19,7 +19,6 @@
 package ca.sqlpower.sqlobject;
 
 import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,7 +43,6 @@ import ca.sqlpower.object.annotation.ConstructorParameter.ParameterType;
 import ca.sqlpower.sql.DataSourceCollection;
 import ca.sqlpower.sql.JDBCDataSourceType;
 import ca.sqlpower.sql.SPDataSource;
-import ca.sqlpower.sql.SQL;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.sqlobject.SQLTypePhysicalProperties.SQLTypeConstraint;
 import ca.sqlpower.sqlobject.SQLTypePhysicalPropertiesProvider.PropertyType;
@@ -53,11 +51,12 @@ import ca.sqlpower.sqlobject.dbmeta.IDatabaseMeta;
 import ca.sqlpower.util.UserPrompter;
 import ca.sqlpower.util.UserPrompterFactory;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 
 public class SQLColumn extends SQLObject implements java.io.Serializable, SPVariableResolverProvider, SQLCheckConstraintContainer {
+
+	private static final long serialVersionUID = -2901805365226649517L;
 
 	private static Logger logger = Logger.getLogger(SQLColumn.class);
 	
@@ -161,8 +160,7 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 		logger.debug("NEW COLUMN (noargs) @"+hashCode());
 		logger.debug("SQLColumn() set ref count to 1");
 		referenceCount = 1;
-		setName(defaultName);
-		setPhysicalName("");
+		setName(defaultName == null ? "new column" : defaultName );
 		userDefinedSQLType.setType(defaultType);
 		userDefinedSQLType.setPrecision(platform, defaultPrec);
 		
@@ -195,8 +193,7 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 		userDefinedSQLType.setParent(this);
 		userDefinedSQLType.setUpstreamType(startingType);
 		setPlatform(SQLTypePhysicalPropertiesProvider.GENERIC_PLATFORM);
-		setName(defaultName);
-		setPhysicalName("");
+		setName(defaultName == null ? "new column" : defaultName);
 		setRemarks(defaultRemarks);
 		referenceCount = 1;
 		setPopulated(true);
@@ -714,6 +711,11 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 		return getName() + ": " + getTypeName();
 	}
 
+	@NonProperty @Override
+	public String getTreeCellTitle(  boolean isUsingLogicalNames ){
+		return ( isUsingLogicalNames ? getLogicalName() : getName() ) + ": " + getTypeName();
+	}
+	
 	// ------------------------- accessors and mutators --------------------------
 
 	@Accessor(isInteresting=true)
@@ -1255,12 +1257,12 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 		String tableName;
     	if (getParent() == null) {
     		tableName = "";
-    	} else if (getParent().getPhysicalName() != null && !getPhysicalName().trim().equals("")) {
-    		tableName = getParent().getPhysicalName() + "_";
+    	} else if (getParent().getName() != null && !getName().trim().equals("")) {
+    		tableName = getParent().getName() + "_";
     	} else {
     		tableName = getParent().getName() +"_";
     	}
-        return tableName + getPhysicalName() + "_seq";
+        return tableName + getName() + "_seq";
 	}
     
 	public String discoverSequenceNameFormat(String tableName, String colName) {
@@ -1413,11 +1415,11 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 	public void setName(String name) {
 	    try {
 	        begin("Setting name and possibly physical or primary key name.");
-	        String oldName = getName();
+	        //String oldName = getName();
 	        super.setName(name);
-	        if (isMagicEnabled()) {
+	       /* if (isMagicEnabled()) {
 	            updatePhysicalNameToMatch(oldName, name);
-	        }
+	        }*/
 	        commit();
 	    } catch (Throwable t) {
 	        rollback(t.getMessage());

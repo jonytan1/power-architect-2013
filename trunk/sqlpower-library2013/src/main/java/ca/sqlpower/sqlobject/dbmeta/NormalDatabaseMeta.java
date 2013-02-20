@@ -34,6 +34,18 @@ import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
 
+/**
+ * Read table/column info from database server,
+ * include table logical name, column logical name.
+ * 
+ * But some database do not support to get table/column logical name.
+ * For example, MySQL not support to get table logical name, 
+ * so we should use {@link MySQLDatabaseMeta} for MySQL, not this class.
+ * 
+ * @author jianjun.tan
+ *
+ */
+
 public class NormalDatabaseMeta implements IDatabaseMeta {
 
 	private static Logger logger = Logger.getLogger(NormalDatabaseMeta.class);

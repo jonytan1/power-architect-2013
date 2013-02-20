@@ -54,7 +54,9 @@ import ca.sqlpower.util.TransactionEvent;
  */
 public class SQLIndex extends SQLObject {
 
-    private static final Logger logger = Logger.getLogger(SQLIndex.class);
+	private static final long serialVersionUID = -3021208061223179100L;
+
+	private static final Logger logger = Logger.getLogger(SQLIndex.class);
     
     /**
 	 * Defines an absolute ordering of the child types of this class.
@@ -94,7 +96,9 @@ public class SQLIndex extends SQLObject {
      */
     public static class Column extends SQLObject {
     	
-    	/**
+		private static final long serialVersionUID = -421295348092368751L;
+
+		/**
     	 * Defines an absolute ordering of the child types of this class.
     	 */
     	public static final List<Class<? extends SPObject>> allowedChildTypes = Collections.emptyList();
@@ -114,8 +118,6 @@ public class SQLIndex extends SQLObject {
             public void propertyChanged(PropertyChangeEvent e) {
                 if ("name".equals(e.getPropertyName())) {
                     setName((String) e.getNewValue());
-                } else if ("physicalName".equals(e.getPropertyName())) {
-                    setPhysicalName((String) e.getNewValue());
                 }
             }
             
@@ -240,7 +242,7 @@ public class SQLIndex extends SQLObject {
             return getName();
         }
 
-        @Override
+    	@Override
         protected void populateImpl() throws SQLObjectException {
             // nothing to do
         }
@@ -273,9 +275,6 @@ public class SQLIndex extends SQLObject {
                     this.column.addSPListener(targetColumnListener);
                 }
                 firePropertyChange("column", oldValue, column);
-                if (this.column != null) {
-                    setPhysicalName(column.getPhysicalName());
-                }
                 commit();
             } catch (RuntimeException e) {
                 rollback(e.getMessage());
@@ -492,7 +491,7 @@ public class SQLIndex extends SQLObject {
         	setFilterCondition(sourceIdx.filterCondition);
         	setQualifier(sourceIdx.qualifier);
         	setClustered(sourceIdx.clustered);
-        	setPhysicalName(sourceIdx.getPhysicalName());
+        	///setPhysicalName(sourceIdx.getPhysicalName());
 
         	if (updateChildren) {
         		makeColumnsLike(sourceIdx);
@@ -805,7 +804,7 @@ public class SQLIndex extends SQLObject {
 										namedPositions.getKey(), true);
 							} else {
 								logger.error("Column " + namedPositions.getValue() + " not found in " + targetTable);
-								throw new RuntimeException("Column " + col.getName() + " not found in " + targetTable);
+								throw new RuntimeException("Column " + namedPositions.getValue() + " not found in " + targetTable);
 							}
 						} catch (SQLObjectException e) {
 							throw new SQLObjectRuntimeException(e);
@@ -1042,7 +1041,7 @@ public class SQLIndex extends SQLObject {
         index.setType(source.getType());
         index.setFilterCondition(source.getFilterCondition());
         index.setQualifier(source.getQualifier());
-        index.setPhysicalName(source.getPhysicalName());
+        //index.setPhysicalName(source.getPhysicalName());
         index.setLogicalName(source.getLogicalName());
         index.setClustered(source.isClustered());
         for (Map.Entry<Class<? extends SQLObject>, Throwable> inaccessibleReason : source.getChildrenInaccessibleReasons().entrySet()) {
@@ -1064,6 +1063,7 @@ public class SQLIndex extends SQLObject {
                 newColumn = new Column(sqlColumn, column.getAscendingOrDescending());
             } else {
                 newColumn = new Column(column.getName(), column.getAscendingOrDescending());
+                newColumn.setLogicalName(column.getLogicalName());
             }
             index.addChild(newColumn);
         }

@@ -21,6 +21,7 @@ package ca.sqlpower.sqlobject;
 
 public class LockedColumnException extends RuntimeException {
 
+	private static final long serialVersionUID = 4842744522035040205L;
 	private SQLRelationship lockingRelationship;
     private SQLColumn col;
 

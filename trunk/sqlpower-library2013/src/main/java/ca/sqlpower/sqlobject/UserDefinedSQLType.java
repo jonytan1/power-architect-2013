@@ -52,6 +52,11 @@ import ca.sqlpower.util.SQLPowerUtils;
 public class UserDefinedSQLType extends SQLObject implements SQLTypePhysicalPropertiesProvider {
 
     /**
+	 * 
+	 */
+	private static final long serialVersionUID = 4743295402900486024L;
+
+	/**
      * An unmodifiable {@link List} of allowed child types
      */
     public static final List<Class<? extends SPObject>> allowedChildTypes = 
@@ -876,7 +881,7 @@ public class UserDefinedSQLType extends SQLObject implements SQLTypePhysicalProp
 						throw new IllegalStateException("Could not add new " +
 								"SQLTypePhysicalProperties for platform " + 
 								sourcePlatform + " to UserDefinedSQLType " + 
-								target.getPhysicalName() + " in copyProperties.");
+								target.getName() + " in copyProperties.");
 					}
     				i++;
     			} else if (compare > 0) {
@@ -887,13 +892,13 @@ public class UserDefinedSQLType extends SQLObject implements SQLTypePhysicalProp
 						throw new IllegalStateException("Could not remove " +
 								"SQLTypePhysicalProperties for platform " + 
 								targetPlatform + " from UserDefinedSQLType " + 
-								target.getPhysicalName());
+								target.getName());
 					} catch (ObjectDependentException e) {
 						target.rollback("Could not copy UserDefinedSQLType");
 						throw new IllegalStateException("Could not remove " +
 								"SQLTypePhysicalProperties for platform " + 
 								targetPlatform + " from UserDefinedSQLType " + 
-								target.getPhysicalName());
+								target.getName());
 					}
     				j++;
     			} else {

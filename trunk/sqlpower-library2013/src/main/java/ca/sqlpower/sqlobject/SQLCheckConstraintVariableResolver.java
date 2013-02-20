@@ -88,7 +88,7 @@ public class SQLCheckConstraintVariableResolver implements SPVariableResolver {
 			} else {
 				switch(var) {
 				case THIS:
-					return column.getPhysicalName();
+					return column.getName();
 				default:
 					return null;
 				}

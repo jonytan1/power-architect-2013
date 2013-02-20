@@ -28,6 +28,16 @@ import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
 
+/**
+ * Interface of the table/column info reader for databases of Microsoft SQL Server,
+ * include table logical name and column logical name
+ * 
+ * defalut is {@link NormalDatabaseMeta}
+ * 
+ * @author jianjun.tan
+ *
+ */
+
 public interface IDatabaseMeta {
 
 	/*

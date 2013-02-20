@@ -35,6 +35,13 @@ import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
 
+/**
+ * Read table/column info from databases of Microsoft SQL Server,
+ * include table logical name and column logical name
+ * 
+ * @author jianjun.tan
+ *
+ */
 public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
 	private static Logger logger = Logger.getLogger(MSSQLServerDatabaseMeta.class);
 
@@ -70,7 +77,6 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
                         rs.getString(5),
                         rs.getString(4),
                         false);
-            	newTable.setPhysicalName(newTableName);
 
             	psLogicalName.clearParameters();
             	psLogicalName.setString(1, newTableName);
@@ -160,7 +166,6 @@ public class MSSQLServerDatabaseMeta implements IDatabaseMeta {
 											  rs.getString(13), // default value
 											  autoIncrement // isAutoIncrement
 											  );
-				col.setPhysicalName(colName);
 				logger.debug("Precision for the column " + rs.getString(4) + " is " + rs.getInt(7));
 
             	psLogicalName.clearParameters();

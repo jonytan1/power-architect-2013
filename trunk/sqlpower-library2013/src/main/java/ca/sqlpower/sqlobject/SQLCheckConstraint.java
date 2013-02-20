@@ -41,6 +41,8 @@ import ca.sqlpower.object.annotation.Transient;
  */
 public class SQLCheckConstraint extends SQLObject {
 
+	private static final long serialVersionUID = 2735022117949806536L;
+
 	/**
 	 * {@link List} of allowed child types, which is empty since
 	 * {@link SQLCheckConstraint} has no children.
