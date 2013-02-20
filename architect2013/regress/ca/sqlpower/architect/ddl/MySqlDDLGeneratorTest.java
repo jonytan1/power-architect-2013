@@ -33,7 +33,7 @@ public class MySqlDDLGeneratorTest extends TestCase {
 		MySqlDDLGenerator ddl = new MySqlDDLGenerator();
 		SQLTable tbl = new SQLTable();
 		tbl.initFolders(true);
-		tbl.setPhysicalName("test_table");
+		tbl.setName("test_table");
 		tbl.setRemarks("Test single ' quotes");
 		SQLColumn id = new SQLColumn(tbl, "id", Types.INTEGER, 1, 0);
 		UserDefinedSQLType idUpstreamType = new UserDefinedSQLType();

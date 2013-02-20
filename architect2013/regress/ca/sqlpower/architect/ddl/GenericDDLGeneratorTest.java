@@ -34,7 +34,7 @@ public class GenericDDLGeneratorTest extends TestCase {
 		GenericDDLGenerator ddl = new GenericDDLGenerator();
 		SQLTable tbl = new SQLTable();
 		tbl.initFolders(true);
-		tbl.setPhysicalName("test_table");
+		tbl.setName("test_table");
 		tbl.setRemarks("Test single ' quotes");
 		SQLColumn id = new SQLColumn(tbl, "id", Types.INTEGER, 0, 0);
 		id.setRemarks("The row's primary key");
@@ -63,7 +63,7 @@ public class GenericDDLGeneratorTest extends TestCase {
 		GenericDDLGenerator ddl = new GenericDDLGenerator(false);
 		SQLTable tbl = new SQLTable();
 		tbl.initFolders(true);
-		tbl.setPhysicalName("test_table");
+		tbl.setName("test_table");
 		
 		SQLColumn col1 = new SQLColumn(tbl, "N_TEST", SQLType.NVARCHAR, "NVARCHAR", 1000, 0, 0, "",
 		  null, false);

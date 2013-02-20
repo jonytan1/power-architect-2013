@@ -43,7 +43,7 @@ public class CSVExportTest extends TestCase {
         DataSourceCollection<SPDataSource> plIni = new PlDotIni();
         JDBCDataSource ds = new JDBCDataSource(plIni);
         SQLDatabase db1 = new SQLDatabase(ds);
-        db1.setPhysicalName("db1");
+        db1.setName("db1");
         SQLCatalog catalog1 = new SQLCatalog(db1,"catalog1");
         SQLSchema schema1 = new SQLSchema(catalog1,"schema1",true);
         SQLTable table1 = new SQLTable(schema1,"table1","","",true);
