@@ -153,6 +153,9 @@ public class TestSQLRelationship extends BaseSQLObjectTestCase {
     	return ColumnMapping.class;
     }
 	
+	/*
+     * Since 1.0.7, physical name seen as a normal property, not the equal property to "name".
+	 */
 	public void testSetPhysicalName() {
 		CountingSQLObjectListener l = new CountingSQLObjectListener();
 		rel1.addSPListener(l);
@@ -181,7 +184,7 @@ public class TestSQLRelationship extends BaseSQLObjectTestCase {
 
 		rel1.setPhysicalName(null);
 		assertEquals(3, l.getChangedCount());
-		assertEquals("new name didn't go back to logical name", rel1.getName(), rel1.getPhysicalName());
+		//assertEquals("new name didn't go back to logical name", rel1.getName(), rel1.getPhysicalName());
 
 		rel1.setPhysicalName(null);
 		assertEquals(3, l.getChangedCount());
