@@ -226,10 +226,10 @@ public class LiquibaseDDLGenerator extends GenericDDLGenerator implements DDLGen
 	}
 
 	private String getName(SQLObject o) {
-		if (StringUtils.isEmpty(o.getPhysicalName())) {
+		if (StringUtils.isEmpty(o.getName())) {
 			return o.getName();
 		}
-		return o.getPhysicalName();
+		return o.getName();
 	}
 
 	public void renameRelationship(SQLRelationship oldFK, SQLRelationship newFK) {
@@ -695,7 +695,7 @@ public class LiquibaseDDLGenerator extends GenericDDLGenerator implements DDLGen
         print("<renameTable ");
         print(getTableQualifier(oldTable, "oldTableName", "schemaName"));
         print(" newTableName=\"");
-        print(newTable.getPhysicalName());
+        print(newTable.getName());
         println("\"/>");
 		endOfStatement();
         endStatement(StatementType.XMLTAG, newTable);

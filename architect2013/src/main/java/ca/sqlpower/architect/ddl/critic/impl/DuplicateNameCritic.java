@@ -90,23 +90,23 @@ public class DuplicateNameCritic extends CriticAndSettings {
         if (subject instanceof SQLColumn) {
             final SQLColumn col = (SQLColumn) subject;
             SQLTable parent = col.getParent();
-            if (col.getPhysicalName() == null) return criticisms;
+            if (col.getName() == null) return criticisms;
 
             int count = 0;
             for (SQLColumn otherCol : columnPhysicalNameMap.get(parent)) {
-                if (col.getPhysicalName().equals(otherCol.getPhysicalName())) {
+                if (col.getName().equals(otherCol.getName())) {
                     count++;
                 }
             }
             if (count > 0) {
-                final String newPhysicalName = col.getPhysicalName() + "_" + count;
+                final String newPhysicalName = col.getName() + "_" + count;
                 criticisms.add(new Criticism(subject, 
-                        "Duplicate physical name \"" + col.getPhysicalName() + "\"", this, 
-                        new CriticFix("Replace physical name " + col.getPhysicalName() + " with " + newPhysicalName, 
+                        "Duplicate physical name \"" + col.getName() + "\"", this, 
+                        new CriticFix("Replace physical name " + col.getName() + " with " + newPhysicalName, 
                                 FixType.QUICK_FIX) {
                             @Override
                             public void apply() {
-                                col.setPhysicalName(newPhysicalName);
+                                col.setName(newPhysicalName);
                             }
                         }));
             }
@@ -115,7 +115,7 @@ public class DuplicateNameCritic extends CriticAndSettings {
         if (subject instanceof SQLTable || subject instanceof SQLRelationship || 
                 subject instanceof SQLIndex || subject instanceof SQLColumn) {
             final SQLObject obj = (SQLObject) subject;
-            String physicalName = obj.getPhysicalName();
+            String physicalName = obj.getName();
             if (obj instanceof SQLColumn) {
                 physicalName = ((SQLColumn) obj).getAutoIncrementSequenceName();
             }
@@ -127,14 +127,14 @@ public class DuplicateNameCritic extends CriticAndSettings {
                         "Duplicate physical name \"" + physicalName + 
                             "\". There is a " + ArchitectUtils.convertClassToString(duplicate.getClass())+ " in " + 
                             duplicate.getParent().getName() + " with this name already.", this, 
-                        new CriticFix("Replace physical name " + obj.getPhysicalName() + " with " + newPhysicalName, 
+                        new CriticFix("Replace physical name " + obj.getName() + " with " + newPhysicalName, 
                                 FixType.QUICK_FIX) {
                             @Override
                             public void apply() {
                                 if (obj instanceof SQLColumn) {
                                     ((SQLColumn) obj).setAutoIncrementSequenceName(newPhysicalName);
                                 } else {
-                                    obj.setPhysicalName(newPhysicalName);
+                                    obj.setName(newPhysicalName);
                                 }
                             }
                 }));

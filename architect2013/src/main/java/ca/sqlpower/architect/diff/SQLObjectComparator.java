@@ -49,15 +49,15 @@ public class SQLObjectComparator implements Comparator<SQLObject>, Serializable 
             //TODO In version 2.0 we want this to be an option
 		    String n1;
 		    String n2;
-		    if (t1.getPhysicalName() == null || t1.getPhysicalName().trim().equals("")) {
+		    if (t1.getName() == null || t1.getName().trim().equals("")) {
 		        n1 = t1.getName();
 		    } else {
-		        n1 = t1.getPhysicalName();
+		        n1 = t1.getLogicalName();
 		    }
-		    if (t2.getPhysicalName() == null || t2.getPhysicalName().trim().equals("")) {
+		    if (t2.getName() == null || t2.getName().trim().equals("")) {
                 n2 = t2.getName();
             } else {
-                n2 = t2.getPhysicalName();
+                n2 = t2.getLogicalName();
             }
             if (n1 != null) n1 = n1.toLowerCase(Locale.getDefault());
             if (n2 != null) n2 = n2.toLowerCase(Locale.getDefault());

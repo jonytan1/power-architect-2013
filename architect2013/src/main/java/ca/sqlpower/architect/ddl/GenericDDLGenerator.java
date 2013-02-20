@@ -563,7 +563,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 	 * @param newTable
 	 */
     public void renameTable(SQLTable oldTable, SQLTable newTable) {
-        println("ALTER TABLE " + oldTable.getPhysicalName() + " RENAME TO " + newTable.getPhysicalName());
+        println("ALTER TABLE " + oldTable.getName() + " RENAME TO " + newTable.getName());
         endStatement(StatementType.ALTER, newTable);
     }
 
@@ -586,10 +586,10 @@ public class GenericDDLGenerator implements DDLGenerator {
         String tableName = c.getParent().getName();
         String logicalName = c.getLogicalName();
         if (schema != null && schema.length() > 0 ) {
-          if (!(c.getPhysicalName().equals(logicalName))){
+          if (!(c.getName().equals(logicalName))){
             print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
                 logicalName.replaceAll("'", "''") + "','user','" + 
-                schema + "','table','" + tableName+"','column','" + c.getPhysicalName() + "'");
+                schema + "','table','" + tableName+"','column','" + c.getName() + "'");
             print(getStatementTerminator());
           }
         }
@@ -891,7 +891,7 @@ public class GenericDDLGenerator implements DDLGenerator {
             sb.append("'" + enumeration.getName() + "'");
         }
         
-        return "CHECK (" + c.getPhysicalName() + " IN (" + 
+        return "CHECK (" + c.getName() + " IN (" + 
                 sb.toString() + "))";
     }
 
@@ -1017,7 +1017,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 	    }
         createPhysicalName(topLevelNames, pk);
 	    print("CONSTRAINT ");
-	    print(pk.getPhysicalName());
+	    print(pk.getName());
 	    print(" PRIMARY KEY (");
 
 	    boolean firstCol = true;
@@ -1026,7 +1026,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 	        if (col.getColumn() == null) {
 	            throw new IllegalStateException("Index column is not associated with the real column in the table.");
 	        } else {
-	            print(col.getColumn().getPhysicalName());
+	            print(col.getColumn().getName());
 	        }
 	        firstCol = false;
 	    }
@@ -1133,14 +1133,14 @@ public class GenericDDLGenerator implements DDLGenerator {
      * schema are omitted if null).
 	 */
 	public String toQualifiedName(SQLTable t) {
-		return toQualifiedName(t.getPhysicalName());
+		return toQualifiedName(t.getName());
 	}
 
 	/**
 	 * Creates a qualified name from the physical name of the SQLIndex
 	 */
 	public String toQualifiedName(SQLIndex i) {
-        return toQualifiedName(i.getPhysicalName());
+        return toQualifiedName(i.getName());
     }
 
     /**
@@ -1282,17 +1282,17 @@ public class GenericDDLGenerator implements DDLGenerator {
 	 * @throws SQLObjectException
      */
 	protected String createPhysicalName(Map<String, SQLObject> dupCheck, SQLObject so) {
-        logger.debug("transform identifier source: " + so.getPhysicalName());
+        logger.debug("transform identifier source: " + so.getName());
         if ((so instanceof SQLTable || so instanceof SQLColumn) &&
-                (so.getPhysicalName() != null && !so.getPhysicalName().trim().equals(""))) {
-		    String physicalName = so.getPhysicalName();
+                (so.getName() != null && !so.getName().trim().equals(""))) {
+		    String physicalName = so.getName();
 		    logger.debug("The physical name for this SQLObject is: " + physicalName);
 		} else {
-		    so.setPhysicalName(toIdentifier(so.getName()));
+		    so.setName(toIdentifier(so.getName()));
 		}
         logger.debug("The logical name field now is: " + so.getLogicalName());
 
-		return so.getPhysicalName();
+		return so.getName();
 	}
 
     /**
@@ -1320,7 +1320,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 	public void dropPrimaryKey(SQLTable t) throws SQLObjectException {
 	    SQLIndex pk = t.getPrimaryKeyIndex();
 	    print("\nALTER TABLE " + toQualifiedName(t.getName())
-	            + " DROP CONSTRAINT " + pk.getPhysicalName());
+	            + " DROP CONSTRAINT " + pk.getName());
 		endStatement(StatementType.DROP, t);
 	}
 
@@ -1406,7 +1406,7 @@ public class GenericDDLGenerator implements DDLGenerator {
         for (SQLIndex.Column c : index.getChildren(SQLIndex.Column.class)) {
             if (!first) print(", ");
             if (c.getColumn() != null) {
-                print(c.getColumn().getPhysicalName());
+                print(c.getColumn().getName());
             } else {
                 print(c.getName());
             }

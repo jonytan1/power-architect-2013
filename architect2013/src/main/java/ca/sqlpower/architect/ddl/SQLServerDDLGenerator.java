@@ -425,13 +425,13 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
         if (c.getLogicalName() == null || c.getLogicalName().trim().length() == 0) return;
 
         String schema = getTargetSchema();
-        String tableName = c.getParent().getPhysicalName();
+        String tableName = c.getParent().getName();
         String logicalName = c.getLogicalName();
         if (schema != null && schema.length() > 0 ) {
-          if (!(c.getPhysicalName().equals(logicalName))){
+          if (!(c.getName().equals(logicalName))){
             print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
                 logicalName.replaceAll("'", "''") + "','user','" + 
-                schema + "','table','" + tableName+"','column','" + c.getPhysicalName() + "'");
+                schema + "','table','" + tableName+"','column','" + c.getName() + "'");
             endStatement(StatementType.COMMENT, c);
           }
         }
@@ -498,7 +498,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
         for (SQLIndex.Column c : index.getChildren(SQLIndex.Column.class)) {
             if (!first) print(", ");
             if (c.getColumn() != null) {
-                print(c.getColumn().getPhysicalName());
+                print(c.getColumn().getName());
             } else {
                 print(c.getName());
             }
@@ -534,7 +534,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
     public void dropPrimaryKey(SQLTable t) {
         SQLIndex pk = t.getPrimaryKeyIndex();
         print("\nALTER TABLE " + toQualifiedName(t.getName())
-                + " DROP " + pk.getPhysicalName());
+                + " DROP " + pk.getName());
         endStatement(StatementType.DROP, t);
     }
 

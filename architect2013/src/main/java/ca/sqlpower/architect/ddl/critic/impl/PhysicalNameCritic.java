@@ -83,18 +83,18 @@ public class PhysicalNameCritic extends CriticAndSettings {
         if (subject instanceof ColumnMapping || subject instanceof Column) return Collections.emptyList();
         
         final SQLObject so = (SQLObject) subject;
-        final String physName = so.getPhysicalName();
+        final String physName = so.getName();
 
         List<Criticism> criticisms = new ArrayList<Criticism>();
         
         if (physName == null || physName.trim().length() == 0){
             criticisms.add(new Criticism(
                     so,
-                    "No physical name for " + so.getName(),
+                    "No physical name for " + so.getLogicalName(),
                     this,
                     new CriticFix("Copy logical name to physical name", FixType.QUICK_FIX) {
                         public void apply() {
-                            so.setPhysicalName(so.getName());
+                            so.setName(so.getLogicalName());
                         }
                     }));
 			return criticisms;
@@ -105,10 +105,10 @@ public class PhysicalNameCritic extends CriticAndSettings {
                     so,
                     "Physical name too long for " + getPlatformName(),
                     this,
-                    new CriticFix("Truncate name to " + so.getPhysicalName().substring(0, getMaxNameLength()), FixType.QUICK_FIX) {
+                    new CriticFix("Truncate name to " + so.getName().substring(0, getMaxNameLength()), FixType.QUICK_FIX) {
                         public void apply() {
-                            if (so.getPhysicalName() != null && so.getPhysicalName().length() > getMaxNameLength()) {
-                                so.setPhysicalName(so.getPhysicalName().substring(0, getMaxNameLength()));
+                            if (so.getName() != null && so.getName().length() > getMaxNameLength()) {
+                                so.setName(so.getName().substring(0, getMaxNameLength()));
                             }
                         }
                     }));
@@ -118,12 +118,12 @@ public class PhysicalNameCritic extends CriticAndSettings {
             final String newLogicalName = correctPhysicalName(so, physName);
             criticisms.add(new Criticism(
                     so,
-                    "Physical name not legal for " + so.getPhysicalName(),
+                    "Physical name not legal for " + so.getName(),
                     this,
                     new CriticFix("Replace the physical name with " + newLogicalName, FixType.QUICK_FIX) {
                         @Override
                         public void apply() {
-                            so.setPhysicalName(newLogicalName);
+                            so.setName(newLogicalName);
                         }
                     }
                     ));

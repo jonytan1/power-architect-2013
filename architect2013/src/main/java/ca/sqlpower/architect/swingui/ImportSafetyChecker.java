@@ -108,7 +108,7 @@ class ImportSafetyChecker {
             return true;
         }
         if (!visit(item)) {               
-            UserPromptResponse response = loseLineage.promptUser(item.getPhysicalName());            
+            UserPromptResponse response = loseLineage.promptUser(item.getName());            
             if (response == UserPromptResponse.CANCEL) {
                 isCancelled = true;
             }

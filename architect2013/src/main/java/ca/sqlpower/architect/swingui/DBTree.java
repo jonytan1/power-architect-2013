@@ -60,6 +60,7 @@ import javax.swing.tree.TreePath;
 
 import org.apache.log4j.Logger;
 
+import ca.sqlpower.architect.ArchitectWindow;
 import ca.sqlpower.architect.swingui.action.DataSourcePropertiesAction;
 import ca.sqlpower.architect.swingui.action.DatabaseConnectionManagerAction;
 import ca.sqlpower.architect.swingui.action.NewDataSourceAction;
@@ -169,7 +170,12 @@ public class DBTree extends JTree implements DragSourceListener {
 		collapseAllAction = new JTreeCollapseAllAction(this, Messages.getString("DBTree.collapseAllActionName"));
 		expandAllAction = new JTreeExpandAllAction(this, Messages.getString("DBTree.expandAllActionName"));
 		addMouseListener(new PopupListener());
-        treeCellRenderer = new DBTreeCellRenderer();
+		ArchitectWindow window = new ArchitectWindow(){
+			public boolean isUsingLogicalNames(){
+				return session.isUsingLogicalNames();
+			}
+		};
+        treeCellRenderer = new DBTreeCellRenderer(window);
         getTreeCellRenderer().addIconFilter(new ProfiledTableIconFilter());
         setCellRenderer(getTreeCellRenderer());
         selectAllChildTablesAction = new SelectAllChildTablesAction();

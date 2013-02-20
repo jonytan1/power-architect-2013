@@ -57,6 +57,7 @@ import ca.sqlpower.sqlobject.SQLRelationship;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.swingui.FolderNode;
+import ca.sqlpower.swingui.IDBTreeModelRender;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.TransactionEvent;
 
@@ -67,17 +68,30 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
 
 	private static Logger logger = Logger.getLogger(DBTreeModel.class);
 
-	
-	
-	private static class ArchitectFolder extends FolderNode {
+	private static class ArchitectFolder extends FolderNode implements IDBTreeModelRender{
 	    private final Class<? extends SQLObject> containingSQLObjectChildType;
 	    protected final Callable<Boolean> isPopulatedRunnable;
+	    private final String folderName;
 	    
 	    public ArchitectFolder(SPObject parentTable, Class<? extends SQLObject> containingChildType,
 	            Callable<Boolean> isPopulatedRunnable) {
 	        super(parentTable, containingChildType);
 	        containingSQLObjectChildType = containingChildType;
 	        this.isPopulatedRunnable = isPopulatedRunnable;
+	        String key = null;
+	        if (containingChildType.isAssignableFrom(SQLColumn.class)) {
+	        	key = "DBTreeCellRenderer.Columns";
+	        } else if (containingChildType.isAssignableFrom(SQLIndex.class)) {
+	        	key = "DBTreeCellRenderer.Indices";
+	        }else if (containingChildType.isAssignableFrom(SQLRelationship.class)) {
+	        	key = "DBTreeCellRenderer.ExportedKeys";
+	        }else if (containingChildType.isAssignableFrom(SQLRelationship.SQLImportedKey.class)) {
+	        	key = "DBTreeCellRenderer.ImportedKeys";
+	        }
+	        
+	        folderName = ( key == null ? 
+	        		Messages.getString("DBTreeCellRenderer.ChildType", containingChildType.getSimpleName(), "{0}" )
+	        		: Messages.getString(key, "{0}" ));
 	    }
 	    
 	    public Throwable getChildrenInaccessibleReason(Class<? extends SQLObject> childType) {
@@ -90,27 +104,17 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
 	    
 	    @Override
 	    public String getShortDisplayName() {
-	        
-	        if (containingChildType.isAssignableFrom(SQLColumn.class)) {
-	            return Messages.getString("DBTreeCellRenderer.Columns", parentTable.getName() );
-	        }
-	        
-	        if (containingChildType.isAssignableFrom(SQLIndex.class)) {
-	            return Messages.getString("DBTreeCellRenderer.Indices", parentTable.getName() );
-	        }
-	        
-	        if (containingChildType.isAssignableFrom(SQLRelationship.class)) {
-	            return Messages.getString("DBTreeCellRenderer.ExportedKeys", parentTable.getName() );
-	        }
-	        
-	        if (containingChildType.isAssignableFrom(SQLRelationship.SQLImportedKey.class)) {
-	            return Messages.getString("DBTreeCellRenderer.ImportedKeys", parentTable.getName() );
-	        }
-	        
-            return Messages.getString("DBTreeCellRenderer.ChildType", 
-            		containingChildType.getSimpleName(), parentTable.getName() );
+	        return folderName.replace("{0}", parentTable.getName());
 	    }
 
+		@Override @NonProperty
+	    public String getTreeCellTitle(boolean isUsingLogicalNames){
+	    	if ( parentTable != null && parentTable instanceof SQLObject )
+	    		return folderName.replace("{0}",
+	    				isUsingLogicalNames ?  ( (SQLObject) parentTable).getLogicalName() : ( (SQLObject) parentTable).getName() );
+	        return folderName.replace("{0}", parentTable.getName());
+	    }
+	    
 	    public boolean isPopulated() {
 	        try {
 	            return isPopulatedRunnable.call().booleanValue();

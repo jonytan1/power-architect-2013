@@ -125,8 +125,8 @@ public class CreateTableAction extends AbstractArchitectAction {
             };
 
             editPanel.setNameText(tp.getModel().getLogicalName());
-            editPanel.setPhysicalNameText(tp.getModel().getPhysicalName());
-            editPanel.setPkNameText(tp.getModel().getPhysicalName() + "_pk");
+            editPanel.setPhysicalNameText(tp.getModel().getName());
+            editPanel.setPkNameText(tp.getModel().getName() + "_pk");
             
             return editPanel;
         }

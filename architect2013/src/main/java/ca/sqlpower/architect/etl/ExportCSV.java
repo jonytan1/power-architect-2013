@@ -89,13 +89,13 @@ public class ExportCSV {
                 if (parent instanceof SQLDatabase){
                     SQLDatabase db = (SQLDatabase) parent;
                     connection.append(dsToCSV(db.getDataSource()));
-                    database.append(db.getPhysicalName());
+                    database.append(db.getName());
                 } else if( parent instanceof SQLSchema) {
-                    schema.append(parent.getPhysicalName());
+                    schema.append(parent.getName());
                 } else if (parent instanceof SQLCatalog) {
-                    catalog.append(parent.getPhysicalName());
+                    catalog.append(parent.getName());
                 } else if (parent instanceof SQLTable){
-                    table.append(parent.getPhysicalName());
+                    table.append(parent.getName());
                 } else if (parent instanceof SQLObjectRoot){
                     // no op
                 } else{
@@ -117,7 +117,7 @@ public class ExportCSV {
         connection.append(",").append("\""+table.toString().replaceAll("\"","\"\"")+"\"");
         connection.append(",");
         if (c!= null) {
-            connection.append("\""+c.getPhysicalName().replaceAll("\"","\"\"")+"\"");
+            connection.append("\""+c.getName().replaceAll("\"","\"\"")+"\"");
         }
         
         return connection;

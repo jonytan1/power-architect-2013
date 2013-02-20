@@ -173,11 +173,11 @@ public class SearchReplace {
     private enum SearchAspect {
         LOGICAL_NAME {
             String getSearchableText(SQLObject obj) {
-                return obj.getName();
+                return obj.getLogicalName();
             }
             @Override
             public void setText(SQLObject obj, String text) {
-                obj.setName(text);
+                obj.setLogicalName(text);
             }
             @Override
             public String getColumnHeading() {
@@ -190,11 +190,11 @@ public class SearchReplace {
         },
         PHYSICAL_NAME {
             String getSearchableText(SQLObject obj) {
-                return obj.getPhysicalName();
+                return obj.getName();
             }
             @Override
             public void setText(SQLObject obj, String text) {
-                obj.setPhysicalName(text);
+                obj.setName(text);
             }
             @Override
             public String getColumnHeading() {

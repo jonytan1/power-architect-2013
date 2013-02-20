@@ -56,17 +56,17 @@ public abstract class ReservedWordsCritic extends CriticAndSettings {
                 subject instanceof SQLRelationship || subject instanceof SQLColumn) {
             final SQLObject sqlObject = (SQLObject) subject;
             String typeName = sqlObject.getClass().getSimpleName().substring(3);
-            if (reservedWords.contains(sqlObject.getPhysicalName().toUpperCase())) {
-                final String newName = sqlObject.getPhysicalName() + "_1";
+            if (reservedWords.contains(sqlObject.getName().toUpperCase())) {
+                final String newName = sqlObject.getName() + "_1";
                 return Collections.singletonList(new Criticism(subject, 
                         Messages.getString("ReservedWordsCritic.criticismDesc", 
                                 Messages.getString(typeName), 
-                                sqlObject.getPhysicalName() + " (" + sqlObject.getName() + ")"), 
+                                sqlObject.getName() + " (" + sqlObject.getName() + ")"), 
                         this, 
                         new CriticFix(Messages.getString("ReservedWordsCritic.quickFixDesc", newName), FixType.QUICK_FIX) {
                             @Override
                             public void apply() {
-                                sqlObject.setPhysicalName(newName);
+                                sqlObject.setName(newName);
                             }
                         }));
             }
