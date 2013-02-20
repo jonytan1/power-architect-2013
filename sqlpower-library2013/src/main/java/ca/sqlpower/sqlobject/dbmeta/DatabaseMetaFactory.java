@@ -32,6 +32,17 @@ package ca.sqlpower.sqlobject.dbmeta;
  *     return dm.fetchColumnsWithLogicalName(catalog, schema, table, dbmd);
  * </code>
  * 
+ * And, we should input some thing into the resource file 
+ * ca.sqlpower.sqlobject.dbmeta.messages.properties.
+ * The format is:
+ * 		#SQLDatabase.dbmeta.{dbproductname}={class name which implement interface ca.sqlpower.sqlobject.dbmeta.IDatabaseMeta }
+ * For example:
+ * 		SQLDatabase.dbmeta.MySQL=ca.sqlpower.sqlobject.dbmeta.MySQLDatabaseMeta
+ * 
+ * {dbproductname} is equal to dbmd.getDatabaseProductName() (and trim all the space character in the string)
+ * 
+ * @author jianjun.tan
+ * 
  */
 import java.util.MissingResourceException;
 

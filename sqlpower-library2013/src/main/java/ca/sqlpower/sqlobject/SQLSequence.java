@@ -41,6 +41,11 @@ import ca.sqlpower.object.annotation.ConstructorParameter;
 public class SQLSequence extends SQLObject {
 
     /**
+	 * 
+	 */
+	private static final long serialVersionUID = 9073906324492903062L;
+
+	/**
      * Creates a new SQLSequence with the given name.
      */
 	@Constructor

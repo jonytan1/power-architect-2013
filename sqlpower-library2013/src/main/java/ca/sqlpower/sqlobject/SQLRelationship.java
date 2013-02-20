@@ -57,6 +57,8 @@ import ca.sqlpower.util.SessionNotFoundException;
  */
 public class SQLRelationship extends SQLObject implements java.io.Serializable {
 	
+	private static final long serialVersionUID = -3434200053332213497L;
+
 	/**
 	 * Defines an absolute ordering of the child types of this class.
 	 */
@@ -355,13 +357,6 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 	public SQLRelationship(SQLRelationship relationshipToCopy) throws SQLObjectException {
 	    this();
 	    updateToMatch(relationshipToCopy);
-	}
-	
-	@Override
-	@Mutator
-	public void setName(String name) {
-		super.setName(name);
-		setPhysicalName(name);
 	}
 	
 	@Override
@@ -1438,6 +1433,8 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 	 */
 	public static class SQLImportedKey extends SQLObject {
 
+		private static final long serialVersionUID = -228453949000177912L;
+
 		private final SQLRelationship relationship;
 
         /**
@@ -1583,12 +1580,21 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 	    	result = 31 * relationship.hashCode();
 			return result;
 		}
+		
+		@NonProperty @Override
+		public String getTreeCellTitle(  boolean isUsingLogicalNames ){
+			if ( relationship == null ) return isUsingLogicalNames ? getLogicalName() : getName();
+	    	return isUsingLogicalNames ? relationship.getLogicalName() : relationship.getName();
+		}
+		
 	}
 	
 	// -------------------------- COLUMN MAPPING ------------------------
 
 	public static class ColumnMapping extends SQLObject {
 		
+		private static final long serialVersionUID = -9124362140859167494L;
+
 		/**
 		 * Defines an absolute ordering of the child types of this class.
 		 */
@@ -1646,7 +1652,7 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 		public ColumnMapping(@ConstructorParameter(parameterType=ParameterType.PROPERTY, propertyName="pkColumn") SQLColumn pkColumn) {
 			this();
 			setPkColumn(pkColumn);
-			pkColumn.addReference();
+			if ( pkColumn != null ) pkColumn.addReference();
 			loading = true;
 		}
 
@@ -1764,6 +1770,27 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 				fkTableName + "." + fkColumnName;
 		}
 
+	    @NonProperty @Override
+	    public String getTreeCellTitle( boolean isUsingLogicalNames){
+			if (pkColumn == null || fkColumn == null) return "Incomplete mapping";
+			
+            StringBuffer title = new StringBuffer();
+            title.append(isUsingLogicalNames ? pkColumn.getLogicalName() : pkColumn.getName() );
+            title.append(" - ");
+			if (fkColumn == null && fkTable != null) {
+				title.append( isUsingLogicalNames ? fkTable.getLogicalName() : fkTable.getName() );
+			} else if (fkColumn.getParent() != null) {
+				title.append( isUsingLogicalNames ? fkColumn.getParent().getLogicalName() : fkColumn.getParent().getName() );
+			}
+            title.append(".");
+			if (fkColumn == null && fkColName != null) {
+				title.append(fkColName);
+			} else if (fkColumn != null) {
+				title.append( isUsingLogicalNames ? fkColumn.getLogicalName() : fkColumn.getName() );
+			}
+			return title.toString();
+	    }
+		
 		/**
 		 * This class is not a lazy-loading class.  This call does nothing.
 		 */
@@ -1915,23 +1942,23 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
         // XXX: need to ensure uniqueness of setName(), but 
         // to_identifier should take care of this...		
         StringBuilder sb = new StringBuilder();
-        if (pkTable.getPhysicalName() == null || pkTable.getPhysicalName().trim().equals("")) {
+        /*if (pkTable.getPhysicalName() == null || pkTable.getPhysicalName().trim().equals("")) {
         	sb.append(pkTable.getName());
         } else {
         	sb.append(pkTable.getPhysicalName());
-        }
-        sb.append("_");
-        if (fkTable.getPhysicalName() == null || fkTable.getPhysicalName().trim().equals("")) {
+        }*/
+        sb.append(pkTable.getName() + "_" + fkTable.getName());
+        /*if (fkTable.getPhysicalName() == null || fkTable.getPhysicalName().trim().equals("")) {
         	sb.append(fkTable.getName());
         } else {
         	sb.append(fkTable.getPhysicalName());
-        }
+        }*/
         sb.append("_fk");
         Set<String> rel = new HashSet<String>();
         SPObject tableParent = pkTable.getParent();
         for(SQLTable tbl : tableParent.getChildren(SQLTable.class)) {
         	for(SQLRelationship r : tbl.getChildren(SQLRelationship.class)) {
-        		rel.add(r.getPhysicalName());
+        		rel.add(r.getName());
         	}
         }
         if (rel.contains(sb.toString())) {

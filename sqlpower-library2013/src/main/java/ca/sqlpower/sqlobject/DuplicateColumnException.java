@@ -24,6 +24,7 @@ package ca.sqlpower.sqlobject;
  */
 public class DuplicateColumnException extends SQLObjectException implements java.io.Serializable {
 
+	private static final long serialVersionUID = -3442029877960289646L;
 	SQLTable table;
     String dupColName;
 

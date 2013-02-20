@@ -56,6 +56,9 @@ import ca.sqlpower.sql.SPDataSource;
 import ca.sqlpower.sql.jdbcwrapper.DatabaseMetaDataDecorator;
 
 public class SQLDatabase extends SQLObject implements java.io.Serializable, PropertyChangeListener {
+
+	private static final long serialVersionUID = 1L;
+
 	private static Logger logger = Logger.getLogger(SQLDatabase.class);
 	
 	/**

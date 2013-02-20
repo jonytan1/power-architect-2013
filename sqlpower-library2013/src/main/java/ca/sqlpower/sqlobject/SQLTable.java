@@ -54,6 +54,11 @@ import com.google.common.collect.ListMultimap;
 public class SQLTable extends SQLObject {
 	
 	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 191268976926219717L;
+
+	/**
 	 * Defines an absolute ordering of the child types of this class.
 	 */
 	@SuppressWarnings("unchecked")
@@ -183,10 +188,10 @@ public class SQLTable extends SQLObject {
      */
     private void setup(SQLObject parent, String name, String remarks, String objectType) {
         super.setParent(parent);
-		super.setName(name);  // this.setName will try to be far to fancy at this point, and break stuff
+		super.setName(name == null ? "" : name );  // this.setName will try to be far to fancy at this point, and break stuff
 		this.remarks = remarks;
 		this.objectType = objectType;
-		super.setPhysicalName(name);
+		//super.setPhysicalName(name);
 		updatePKIndexNameToMatch(null, name);
 		if (this.objectType == null) throw new NullPointerException();
     }
@@ -240,6 +245,7 @@ public class SQLTable extends SQLObject {
 		primaryKeyIndex = new SQLIndex();
 		primaryKeyIndex.setParent(this);
         setup(null,null,null,"TABLE");
+	    
 	}
 
 
@@ -272,7 +278,7 @@ public class SQLTable extends SQLObject {
 	    SQLTable sourceTable = (SQLTable) source;
 	    setName(sourceTable.getName());
 	    setRemarks(sourceTable.getRemarks());
-	    setPhysicalName(sourceTable.getPhysicalName());
+	    //setPhysicalName(sourceTable.getPhysicalName());
 	    setObjectType(sourceTable.getObjectType());
 	}
 	
@@ -1455,7 +1461,7 @@ public class SQLTable extends SQLObject {
 	 *
 	 * @param argName The new table name.  NULL is not allowed.
 	 */
-	@Mutator
+	/*@Mutator
 	public void setPhysicalName(String argName) {
 
         logger.debug("About to change table name from \""+getPhysicalName()+"\" to \""+argName+"\"");
@@ -1498,16 +1504,31 @@ public class SQLTable extends SQLObject {
             commit();
         }
 	}
+	*/
 	
 	@Mutator
 	@Override
 	public void setName(String name) {
 	    try {
-	        begin("Setting name and possibly physical or primary key name.");
-	        if (isMagicEnabled()) {
-	            updatePhysicalNameToMatch(getName(), name);
-	        }
+	        begin("Setting name and possibly primary key name.");
+	        String oldName = getName();
 	        super.setName(name);
+	        if (isMagicEnabled()) {
+	            updatePKIndexNameToMatch(oldName, name);
+	            
+	            if (isColumnsPopulated()) {
+	                for (SQLColumn col : getColumns()) {
+	                    if (col.isAutoIncrementSequenceNameSet()) {
+	                    	String testingName = col.discoverSequenceNameFormat(oldName, col.getName());
+
+	                    	if (testingName.equals(col.getAutoIncrementSequenceName())) {
+	                    		col.setAutoIncrementSequenceName(
+	                    				col.makeAutoIncrementSequenceName());
+	                    	}
+	                    }
+	                }
+	            }
+	        }
 	        commit();
 	    } catch (Throwable t) {
 	        rollback(t.getMessage());
@@ -2172,4 +2193,11 @@ public class SQLTable extends SQLObject {
 	SQLIndex getPrimaryKeyIndexWithoutPopulating() {
 		return primaryKeyIndex;
 	}
+	
+	@NonProperty @Override
+	public String getTreeCellTitle(  boolean isUsingLogicalNames ){
+		String title = super.getTreeCellTitle(isUsingLogicalNames);
+		return ( this.objectType == null ? title : title + " (" + this.objectType + ")" );
+	}
+	
 }

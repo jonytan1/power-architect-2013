@@ -45,6 +45,11 @@ import ca.sqlpower.util.SQLPowerUtils;
 public class SQLTypePhysicalProperties extends SQLObject implements SQLCheckConstraintContainer {
     
     /**
+	 * 
+	 */
+	private static final long serialVersionUID = -2309159473033637468L;
+
+	/**
      * {@link SQLTypePhysicalProperties} supports check constraints, and
      * enumeration constraints, but not both
      */
@@ -506,7 +511,7 @@ public class SQLTypePhysicalProperties extends SQLObject implements SQLCheckCons
 	 */
     public static boolean areEqual(SQLTypePhysicalProperties prop1, SQLTypePhysicalProperties prop2) {
 		boolean equal = SQLPowerUtils.areEqual(prop1.getName(), prop2.getName())
-				&& SQLPowerUtils.areEqual(prop1.getPhysicalName(), prop2.getPhysicalName())
+				//&& SQLPowerUtils.areEqual(prop1.getPhysicalName(), prop2.getPhysicalName())
 				&& SQLPowerUtils.areEqual(prop1.getPrecision(), prop2.getPrecision())
 				&& SQLPowerUtils.areEqual(prop1.getPrecisionType(), prop2.getPrecisionType())
 				&& SQLPowerUtils.areEqual(prop1.getScale(), prop2.getScale())

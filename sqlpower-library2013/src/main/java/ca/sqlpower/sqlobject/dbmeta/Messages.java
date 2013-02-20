@@ -20,6 +20,13 @@ package ca.sqlpower.sqlobject.dbmeta;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
+/**
+ * message resource for package ca.sqlpower.sqlobject.dbmeta
+ * 
+ * @author jianjun.tan
+ *
+ */
+
 public class Messages {
     private static final String BUNDLE_NAME = "ca.sqlpower.sqlobject.dbmeta.messages"; //$NON-NLS-1$
 

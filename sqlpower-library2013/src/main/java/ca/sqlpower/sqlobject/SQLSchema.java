@@ -44,6 +44,11 @@ import ca.sqlpower.util.SQLPowerUtils;
 public class SQLSchema extends SQLObject {
 	
 	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8253798657595896552L;
+
+	/**
 	 * Defines an absolute ordering of the child types of this class.
 	 */
 	public static final List<Class<? extends SPObject>> allowedChildTypes = 
@@ -142,7 +147,7 @@ public class SQLSchema extends SQLObject {
         SQLSchema s = (SQLSchema) source;
         setName(s.getName());
         setNativeTerm(s.getNativeTerm());
-        setPhysicalName(s.getPhysicalName());
+        //setPhysicalName(s.getPhysicalName());
         setLogicalName(s.getLogicalName());
     }
 

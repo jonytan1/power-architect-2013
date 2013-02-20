@@ -120,7 +120,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			SPObject parent = sourceType.getParent();
 			if (!(parent instanceof SQLColumn)) {
 				throw new IllegalStateException("UserDefinedSQLType " + 
-						sourceType.getPhysicalName() + " must have a SQLColumn parent.");
+						sourceType.getName() + " must have a SQLColumn parent.");
 			}
 			SQLColumn sourceColumn = (SQLColumn) parent;
 			ColumnMapping m = relationship.getMappingByPkCol(sourceColumn);
@@ -159,7 +159,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			SPObject parent = sourceProperties.getParent();
 			if (!(parent instanceof UserDefinedSQLType)) {
 				throw new IllegalStateException("SQLTypePhysicalProperties " + 
-						sourceProperties.getPhysicalName() + 
+						sourceProperties.getName() + 
 						" must have a UserDefinedSQLType parent.");
 			}
 			UserDefinedSQLType sourceType = (UserDefinedSQLType) parent;
@@ -167,7 +167,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			parent = sourceType.getParent();
 			if (!(parent instanceof SQLColumn)) {
 				throw new IllegalStateException("UserDefinedSQLType " + 
-						sourceType.getPhysicalName() + " must have a SQLColumn parent.");
+						sourceType.getName() + " must have a SQLColumn parent.");
 			}
 			SQLColumn sourceColumn = (SQLColumn) parent;
 			ColumnMapping m = relationship.getMappingByPkCol(sourceColumn);
@@ -213,7 +213,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			SPObject parent = sourceConstraint.getParent();
 			if (!(parent instanceof SQLTypePhysicalProperties)) {
 				throw new IllegalStateException("SQLCheckConstraint " + 
-						sourceConstraint.getPhysicalName() + 
+						sourceConstraint.getName() + 
 						" must have a SQLTypePhysicalProperties parent.");
 			}
 			SQLTypePhysicalProperties sourceProperties = (SQLTypePhysicalProperties) parent;
@@ -221,7 +221,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			parent = sourceProperties.getParent();
 			if (!(parent instanceof UserDefinedSQLType)) {
 				throw new IllegalStateException("SQLTypePhysicalProperties " + 
-						sourceProperties.getPhysicalName() + 
+						sourceProperties.getName() + 
 						" must have a UserDefinedSQLType parent.");
 			}
 			UserDefinedSQLType sourceType = (UserDefinedSQLType) parent;
@@ -229,7 +229,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			parent = sourceType.getParent();
 			if (!(parent instanceof SQLColumn)) {
 				throw new IllegalStateException("UserDefinedSQLType " + 
-						sourceType.getPhysicalName() + " must have a SQLColumn parent.");
+						sourceType.getName() + " must have a SQLColumn parent.");
 			}
 			SQLColumn sourceColumn = (SQLColumn) parent;
 			
@@ -264,7 +264,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			SPObject parent = sourceEnumeration.getParent();
 			if (!(parent instanceof SQLTypePhysicalProperties)) {
 				throw new IllegalStateException("SQLEnumeration " + 
-						sourceEnumeration.getPhysicalName() + 
+						sourceEnumeration.getName() + 
 						" must have a SQLTypePhysicalProperties parent.");
 			}
 			SQLTypePhysicalProperties sourceProperties = (SQLTypePhysicalProperties) parent;
@@ -272,7 +272,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			parent = sourceProperties.getParent();
 			if (!(parent instanceof UserDefinedSQLType)) {
 				throw new IllegalStateException("SQLTypePhysicalProperties " + 
-						sourceProperties.getPhysicalName() + 
+						sourceProperties.getName() + 
 						" must have a UserDefinedSQLType parent.");
 			}
 			UserDefinedSQLType sourceType = (UserDefinedSQLType) parent;
@@ -280,7 +280,7 @@ class ForeignKeyColumnUpdaterPoolingSPListener extends
 			parent = sourceType.getParent();
 			if (!(parent instanceof SQLColumn)) {
 				throw new IllegalStateException("UserDefinedSQLType " + 
-						sourceType.getPhysicalName() + " must have a SQLColumn parent.");
+						sourceType.getName() + " must have a SQLColumn parent.");
 			}
 			SQLColumn sourceColumn = (SQLColumn) parent;
 			ColumnMapping m = relationship.getMappingByPkCol(sourceColumn);
