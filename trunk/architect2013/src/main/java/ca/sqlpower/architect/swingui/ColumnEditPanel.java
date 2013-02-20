@@ -623,8 +623,8 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                     // Changing sequence name doesn't make sense in multi-edit
                     // because sequence names have to be unique
                     SQLColumn column = columns.iterator().next();
-                    if (column.getPhysicalName() != null && !column.getPhysicalName().trim().equals("")) {
-                        discoverSequenceNamePattern(column.getPhysicalName());
+                    if (column.getName() != null && !column.getName().trim().equals("")) {
+                        discoverSequenceNamePattern(column.getName());
                     } else {
                         discoverSequenceNamePattern(column.getLogicalName());
                     }
@@ -705,7 +705,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                     if (selection instanceof SQLColumn) {
                         SQLColumn sourceColumn = (SQLColumn) selection;
                         colSourceButton.setText(DDLUtils.toQualifiedName(
-                                sourceColumn.getParent()) + "." + sourceColumn.getPhysicalName());
+                                sourceColumn.getParent()) + "." + sourceColumn.getName());
                     } else {
                         colSourceButton.setText(Messages.getString("ColumnEditPanel.noneSpecified"));
                     }
@@ -776,11 +776,11 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
             colSourceTree.setSelectionPath(new TreePath(model.getPathToNode(sourceColumn)));
             colSourceButton.setText(
                     DDLUtils.toQualifiedName(
-                            sourceColumn.getParent()) + "." + sourceColumn.getPhysicalName());
+                            sourceColumn.getParent()) + "." + sourceColumn.getName());
         }
         
         updateComponent(colLogicalName, col.getLogicalName());
-        updateComponent(colPhysicalName, col.getPhysicalName());
+        updateComponent(colPhysicalName, col.getName());
         
         updateComponent(colType, col.getUserDefinedSQLType().getUpstreamType());
         if (!colType.isSelectionEmpty()) {
@@ -809,8 +809,8 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
         updateComponent(colAutoIncSequenceName, col.getAutoIncrementSequenceName());
 
         updateComponents();
-        if (col.getPhysicalName() != null && !col.getPhysicalName().trim().equals("")) {
-            discoverSequenceNamePattern(col.getPhysicalName());
+        if (col.getName() != null && !col.getName().trim().equals("")) {
+            discoverSequenceNamePattern(col.getName());
         } else {
             discoverSequenceNamePattern(col.getLogicalName());
         }
@@ -867,7 +867,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
 
         String tableName = null;
         if (columns.get(0).getParent() != null) {
-            tableName = columns.get(0).getParent().getPhysicalName();
+            tableName = columns.get(0).getParent().getName();
         }
         
         if ((prefixEnd != -1 && seqName.substring
@@ -983,7 +983,7 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
                     if (colPhysicalName.getText().trim().length() == 0) {
                         errors.add(Messages.getString("ColumnEditPanel.columnNameRequired")); //$NON-NLS-1$
                     } else {
-                        column.setPhysicalName(colPhysicalName.getText());
+                        column.setName(colPhysicalName.getText());
                     }
                 }                
                 if (componentEnabledMap.get(colLogicalName).isSelected()) {

@@ -298,7 +298,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
         if (tablePane.isUsingLogicalNames()) {
             displayName.append(col.getLogicalName()).append(": ");
         } else {
-            displayName.append(col.getPhysicalName()).append(": ");
+            displayName.append(col.getName()).append(": ");
         }
         displayName.append(col.getTypeName());
         displayName.append(getColumnTag(col));
@@ -469,10 +469,10 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
             fqn.append(db);
             if (cat != null) fqn.append('.').append(cat);
             if (sch != null) fqn.append('.').append(sch);
-            fqn.append('.').append(tp.isUsingLogicalNames()? tp.getModel().getLogicalName():tp.getModel().getPhysicalName());
+            fqn.append('.').append(tp.isUsingLogicalNames()? tp.getModel().getLogicalName():tp.getModel().getName());
             return fqn.toString();
         } else {
-            return tp.isUsingLogicalNames()? tp.getModel().getLogicalName():tp.getModel().getPhysicalName();
+            return tp.isUsingLogicalNames()? tp.getModel().getLogicalName():tp.getModel().getName();
         }
     }
 

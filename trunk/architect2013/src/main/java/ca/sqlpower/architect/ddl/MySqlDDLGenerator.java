@@ -394,7 +394,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 		Map<String, SQLObject> cols = new HashMap<String, SQLObject>();
 		try {
 			for (SQLColumn col : oldCol.getParent().getColumns()) {
-				cols.put(col.getPhysicalName(), col);
+				cols.put(col.getName(), col);
 			}
 		} catch (SQLObjectException e) {
 			// can't do anything...
@@ -407,14 +407,14 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
 	@Override
 	public void renameRelationship(SQLRelationship oldFK, SQLRelationship newFK) {
-		println("/* Renaming foreign key " + oldFK.getPhysicalName() + " to " + newFK.getPhysicalName() + " */");
+		println("/* Renaming foreign key " + oldFK.getName() + " to " + newFK.getName() + " */");
 		dropRelationship(oldFK);
 		addRelationship(newFK);
 	}
 
 	@Override
 	public void renameIndex(SQLIndex oldIndex, SQLIndex newIndex) throws SQLObjectException {
-		println("/* Renaming index " + oldIndex.getPhysicalName() + " to " + newIndex.getPhysicalName() + " */");
+		println("/* Renaming index " + oldIndex.getName() + " to " + newIndex.getName() + " */");
 		dropIndex(oldIndex);
 		addIndex(newIndex);
 	}
@@ -435,7 +435,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
         boolean firstCol = true;
         for (SQLIndex.Column col : pk.getChildren(SQLIndex.Column.class)) {
             if (!firstCol) print(", ");
-            print(col.getPhysicalName());
+            print(col.getName());
             firstCol = false;
         }
         print(")");
@@ -591,7 +591,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
             if (!first)
                 print(", ");
             if (c.getColumn() != null) {
-                print(c.getColumn().getPhysicalName());
+                print(c.getColumn().getName());
             } else {
                 print(c.getName());
             }
@@ -668,7 +668,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 	        print("\nALTER TABLE ");
 	        print(toQualifiedName(c.getParent()));
 	        print(" MODIFY COLUMN ");
-	        print(c.getPhysicalName());
+	        print(c.getName());
 	        print(" ");
 	        print(c.getTypeName());
 	        print(" COMMENT '");
@@ -744,7 +744,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
                 print(" FIRST");
             } else if (colPosition > 0) {
                 SQLObject precedingColumn = c.getParent().getChild(colPosition - 1);
-                print(" AFTER " + precedingColumn.getPhysicalName());
+                print(" AFTER " + precedingColumn.getName());
             } else {
                 throw new IllegalStateException(
                         "Column " + c + " is not a child of its parent!" +

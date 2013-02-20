@@ -160,8 +160,8 @@ public class CompareDMFormatter {
                 gen = dmSetting.getDdlGenerator().newInstance();
                 SQLCatalog cat = (SQLCatalog) dmSetting.getSourceSettings().getCatalogObject();
                 SQLSchema sch = (SQLSchema) dmSetting.getSourceSettings().getSchemaObject();
-                gen.setTargetCatalog(cat == null ? null : cat.getPhysicalName());
-                gen.setTargetSchema(sch == null ? null : sch.getPhysicalName());
+                gen.setTargetCatalog(cat == null ? null : cat.getName());
+                gen.setTargetSchema(sch == null ? null : sch.getName());
             } else if (dmSetting.getOutputFormat().equals(CompareDMSettings.OutputFormat.LIQUIBASE)) {
 				gen = new LiquibaseDDLGenerator();
 				LiquibaseDDLGenerator lbgen = (LiquibaseDDLGenerator)gen;
@@ -482,13 +482,15 @@ public class CompareDMFormatter {
         int depth = 0;
         for (DiffChunk<SQLObject> chunk : diff) {
             SQLObject data = chunk.getData();
+            /*
             String name;
-            if (data instanceof SQLTable && data.getPhysicalName() != null) {
-                name = data.getPhysicalName();
-            } else {
+            if (data instanceof SQLTable && data.getName() != null) {
                 name = data.getName();
+            } else {
+                name = data.getPhysicalName();
             }
-            DiffInfo info = new DiffInfo(data.getClass().getSimpleName().replaceFirst("SQL", ""), name);
+            */
+            DiffInfo info = new DiffInfo(data.getClass().getSimpleName().replaceFirst("SQL", ""), data.getName());
 
 
             // Set the depth property based on the object hierarchy.

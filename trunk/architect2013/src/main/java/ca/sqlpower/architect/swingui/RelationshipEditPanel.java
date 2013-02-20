@@ -327,7 +327,7 @@ public class RelationshipEditPanel extends ChangeListeningDataEntryPanel impleme
 		try {
 		    relationship.begin(Messages.getString("RelationshipEditPanel.modifyRelationshipProperties")); //$NON-NLS-1$
 			relationship.setName(relationshipName.getText());
-			relationship.setPhysicalName(relationshipName.getText());
+			//relationship.setPhysicalName(relationshipName.getText());
 			// set the parent label text of relationship lines
 			relationship.setTextForParentLabel(pkLabelTextField.getText());
 			// set the child label text of relationship lines

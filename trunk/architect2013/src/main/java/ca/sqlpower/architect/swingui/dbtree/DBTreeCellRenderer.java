@@ -35,6 +35,7 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 
 import org.apache.log4j.Logger;
 
+import ca.sqlpower.architect.ArchitectWindow;
 import ca.sqlpower.architect.swingui.SQLTypeTreeCellRenderer;
 import ca.sqlpower.object.SPObject;
 import ca.sqlpower.sqlobject.SQLCatalog;
@@ -49,6 +50,8 @@ import ca.sqlpower.sqlobject.UserDefinedSQLTypeSnapshot;
 import ca.sqlpower.sqlobject.SQLIndex.Column;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.swingui.ComposedIcon;
+import ca.sqlpower.swingui.FolderNode;
+import ca.sqlpower.swingui.IDBTreeModelRender;
 
 /**
  * The DBTreeCellRenderer renders nodes of a JTree which are of
@@ -81,10 +84,17 @@ public class DBTreeCellRenderer extends DefaultTreeCellRenderer {
    
     private final List<IconFilter> iconFilterChain = new ArrayList<IconFilter>();
     
-	public DBTreeCellRenderer() {
+    private ArchitectWindow window;
+    
+	public DBTreeCellRenderer(ArchitectWindow window) {
         super();
+        this.window = window;
     }
 
+	public DBTreeCellRenderer() {
+        this( new ArchitectWindow() );
+    }
+	
     public Component getTreeCellRendererComponent(JTree tree,
 												  Object value,
 												  boolean sel,
@@ -92,7 +102,10 @@ public class DBTreeCellRenderer extends DefaultTreeCellRenderer {
 												  boolean leaf,
 												  int row,
 												  boolean hasFocus) {
-		setText(value.toString());
+    	if ( value != null && value instanceof IDBTreeModelRender )
+    		setText( ( (IDBTreeModelRender) value ).getTreeCellTitle(this.window.isUsingLogicalNames()) );
+    	else
+    		setText(value == null ? "null" : value.toString());
 	    setToolTipText(getText());
 	    
         if (value instanceof SQLDatabase) {
@@ -120,14 +133,6 @@ public class DBTreeCellRenderer extends DefaultTreeCellRenderer {
 			}
 		} else if (value instanceof SQLTable) {
 		    setIcon(TABLE_ICON);
-			
-		    SQLTable table = (SQLTable) value;
-            if ((table).getObjectType() != null) {
-            	//getPhysicalName ? getName
-			    setText((table).getPhysicalName()+" ("+(table).getObjectType()+")"); //$NON-NLS-1$ //$NON-NLS-2$
-			} else {
-			    setText((table).getPhysicalName());
-			}
 		} else if (value instanceof SQLRelationship) {
 		    setIcon(EXPORTED_KEY_ICON);
 		} else if (value instanceof SQLImportedKey) {

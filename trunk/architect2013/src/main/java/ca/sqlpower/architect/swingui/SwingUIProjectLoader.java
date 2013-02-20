@@ -1452,8 +1452,8 @@ public class SwingUIProjectLoader extends ProjectLoader {
         Map<String,Object> propNames = new TreeMap<String,Object>();
 
         // properties of all SQLObject types
-        propNames.put("physicalName", o.getPhysicalName()); //$NON-NLS-1$
-        propNames.put("name", o.getPhysicalName());
+        //propNames.put("physicalName", o.getPhysicalName()); //$NON-NLS-1$
+        propNames.put("name", o.getName());
         propNames.put("logicalName", o.getLogicalName());
         propNames.put("UUID", o.getUUID());
         

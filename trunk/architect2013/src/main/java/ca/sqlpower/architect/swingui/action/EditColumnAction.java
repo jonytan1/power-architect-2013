@@ -144,11 +144,14 @@ public class EditColumnAction extends AbstractArchitectAction {
                 
                 // XXX it sucks to do this here, but the column can't determine its correct
                 //     sequence name until it has a parent. By then, it will be too late.
-                if (st.getPhysicalName() != null && !st.getPhysicalName().trim().equals("")) {
-                    column.setAutoIncrementSequenceName(st.getPhysicalName() + "_" + column.getName() + "_seq"); //$NON-NLS-1$ //$NON-NLS-2$
+			    /*
+                if (st.getName() != null && !st.getName().trim().equals("")) {
+                    column.setAutoIncrementSequenceName(st.getName() + "_" + column.getName() + "_seq"); //$NON-NLS-1$ //$NON-NLS-2$
                 } else {
                     column.setAutoIncrementSequenceName(st.getName() + "_" + column.getName() + "_seq"); //$NON-NLS-1$ //$NON-NLS-2$
                 }
+                */
+			    column.setAutoIncrementSequenceName(st.getName() + "_" + column.getName() + "_seq"); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 			
 			final ColumnEditPanel columnEditPanel = new ColumnEditPanel(column, getSession());
