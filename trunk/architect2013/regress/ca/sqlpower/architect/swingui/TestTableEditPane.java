@@ -35,7 +35,7 @@ public class TestTableEditPane extends TestCase {
         ArchitectSwingSession session = context.createSession();
 		t = new SQLTable(session.getTargetDatabase(), true);
 		t.setName("Test Table");
-		t.setPhysicalName("Test_Table_1");
+		t.setLogicalName("Test_Table_1");
 		SQLColumn pk1 = new SQLColumn(t, "PKColumn1", Types.INTEGER, 10,0);
 		
 		t.addColumn(pk1,0);						
@@ -47,13 +47,13 @@ public class TestTableEditPane extends TestCase {
     public void testChangeName() {           
         tep.setNameText("New Name");
         tep.applyChanges();
-        assertEquals ("New Name", t.getName());     
+        assertEquals ("New Name", t.getLogicalName());     
     }
     
     public void testChangePhysicalName(){
         tep.setPhysicalNameText("New_Name");
         tep.applyChanges();
-        assertEquals("New_Name", t.getPhysicalName());
+        assertEquals("New_Name", t.getName());
     }
 
     public void testPrimaryNameChangeUpdatesPk() throws Exception {
@@ -75,7 +75,7 @@ public class TestTableEditPane extends TestCase {
         tep.setPkNameText("New PK Name");
         tep.applyChanges();
         assertEquals ("New PK Name", t.getPrimaryKeyIndex().getName());     
-        assertEquals ("New PK Name", t.getPrimaryKeyIndex().getPhysicalName());     
+        //assertEquals ("New PK Name", t.getPrimaryKeyIndex().getPhysicalName());     
     }
 
 }

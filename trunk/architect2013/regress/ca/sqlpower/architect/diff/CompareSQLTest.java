@@ -495,7 +495,7 @@ public class CompareSQLTest extends TestCase {
 		SQLTable t2 = makeTable(1,2);
 
 		t2.setName("new_table_name");
-		t2.setPhysicalName("new_table_name");
+		t2.setLogicalName("new_table_name");
 		list2.add(t2);
 
 		// Copying the UUID simulates loading a different version of the same model file
@@ -503,7 +503,7 @@ public class CompareSQLTest extends TestCase {
 		copyUUIDs(t1, t2);
 		
 		t2.getColumn(1).setName("column_name_changed");
-		t2.getColumn(1).setPhysicalName("column_name_changed");
+		t2.getColumn(1).setLogicalName("column_name_changed");
 
 		CompareSQL sqlComparator = new CompareSQL(list1, list2, false, true);
 		sqlComparator.setCompareIndices(false);

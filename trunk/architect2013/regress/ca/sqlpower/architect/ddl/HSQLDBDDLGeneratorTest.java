@@ -46,7 +46,7 @@ public class HSQLDBDDLGeneratorTest extends TestCase {
         HSQLDBDDLGenerator ddl = new HSQLDBDDLGenerator();
         SQLTable tbl = new SQLTable();
         tbl.initFolders(true);
-        tbl.setPhysicalName("test_table");
+        tbl.setName("test_table");
         tbl.setRemarks("Test single ' quotes");
         SQLColumn id = new SQLColumn(tbl, "id", Types.INTEGER, 0, 0);
         id.setRemarks("The row's primary key");
