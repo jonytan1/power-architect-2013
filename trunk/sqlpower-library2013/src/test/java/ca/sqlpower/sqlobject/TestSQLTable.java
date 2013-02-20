@@ -135,17 +135,20 @@ public class TestSQLTable extends BaseSQLObjectTestCase {
         
     }
     
+    /*
+     * Since 1.0.7, physical name seen as a normal property, not the equal property to "name".
+     */
     public void testRenamePhysicalNameOfTableRenamesPK() throws SQLObjectException{
         assertNotNull("Table has null logical name",table.getName());
         String newName = "newTableName";
         String newPhysicalName = "new_Table_Name";
         table.setName(newName);
         
-        assertNotNull("Table has null physical name", table.getPhysicalName());
-        assertEquals("The physical name does not match the logical", newName, table.getPhysicalName().trim());
+        //assertNotNull("Table has null physical name", table.getPhysicalName());
+        //assertEquals("The physical name does not match the logical", newName, table.getPhysicalName().trim());
         
         table.setPhysicalName(newPhysicalName);
-        assertEquals(newPhysicalName+"_pk",table.getPrimaryKeyIndex().getName());
+        assertEquals(newName+"_pk",table.getPrimaryKeyIndex().getName());
     }
     
     public void testRenamePhysicalNameOfTableDoesntRenamePKIfPKRenamed() throws SQLObjectException {
@@ -159,13 +162,16 @@ public class TestSQLTable extends BaseSQLObjectTestCase {
         assertEquals(newPKName, table.getPrimaryKeyIndex().getName());
     }
     
-    public void testRenamePhysicalNameOfTableRenamesSequences() throws Exception {
-        table.setPhysicalName("old name");
-        table.getColumn(0).setPhysicalName("cow");
-        table.getColumn(0).setAutoIncrementSequenceName(table.getPhysicalName() + "_cow");
-        table.setPhysicalName("new name");
+    /*
+     * Since 1.0.7, physical name seen as a normal property, not the equal property to "name".
+     */
+    public void testRenameNameOfTableRenamesSequences() throws Exception {
+        table.setName("old name");
+        table.getColumn(0).setName("cow");
+        table.getColumn(0).setAutoIncrementSequenceName(table.getName() + "_cow");
+        table.setName("new name");
         assertTrue(table.getColumn(0).isAutoIncrementSequenceNameSet());
-        assertEquals(table.getPhysicalName() + "_cow_seq", table.getColumn(0).getAutoIncrementSequenceName());
+        assertEquals(table.getName() + "_cow_seq", table.getColumn(0).getAutoIncrementSequenceName());
     }
 
     public void testRenameTableDoesNotRenameUnnamedSequences() throws Exception {
@@ -1269,7 +1275,10 @@ public class TestSQLTable extends BaseSQLObjectTestCase {
     /**
      * This tests that a physical name of a table will be updated to match its
      * name correctly if they both match when they change.
+     * 
+     * Since 1.0.7, physical name seen as a normal property, not the equal property to "name".
      */
+    /*
     public void testNamesInSync() throws Exception {
         SQLTable table = new SQLTable();
         
@@ -1296,4 +1305,5 @@ public class TestSQLTable extends BaseSQLObjectTestCase {
         assertEquals("Trial", table.getPhysicalName());
         assertTrue(table.getPrimaryKeyIndex().getName().startsWith("Trial"));
     }
+    */
 }

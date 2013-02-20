@@ -54,17 +54,18 @@ public class TestSQLDatabase extends BaseSQLObjectTestCase {
 	
 	/*
 	 * Test method for 'ca.sqlpower.sqlobject.SQLDatabase.getName()'
+     * Since 1.0.7, physical name seen as a normal property, not the equal property to "name".
 	 */
 	public void testGetName() {
 		SQLDatabase db1 = new SQLDatabase();
 		db1.setPlayPenDatabase(true);
 		assertEquals("PlayPen Database", db1.getName());
 		assertEquals("PlayPen Database", db1.getShortDisplayName());
-		assertEquals(db1.getName(), db1.getPhysicalName());
+		//assertEquals(db1.getName(), db1.getPhysicalName());
 		
 		assertEquals(db.getName(), db.getDataSource().getDisplayName());
 		assertEquals(db.getDataSource().getDisplayName(), db.getShortDisplayName());
-		assertEquals(db.getName(), db.getPhysicalName());
+		//assertEquals(db.getName(), db.getPhysicalName());
 	}
 	
 	/*
