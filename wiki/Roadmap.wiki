@@ -6,6 +6,6 @@
  * Support Simplified Chinese
  * Show non-nullable info
 
-=Next=
+=In future=
  * Support multiple schema
  * Support View etc
