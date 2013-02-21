@@ -12,7 +12,7 @@
   * The shcema name can not be duplicate.
   * The pop-up menu of "playpen database" tree note has a sub-menu named "Add Schema".
   * The pop-up menu of schema tree node in playpen database has a sub-menu named "Edit Schema"
-  * The user can modify the schema name of the table, when he/she is editing a table.
+  * The user can modify the schema of the table, when he/she is editing a table.
 
 
 
