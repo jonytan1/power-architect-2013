@@ -1,6 +1,9 @@
 <project name="sqlpower_library" default="jar" basedir=".">
 
 	<!-- $Id$ -->
+    <tstamp>
+        <format property="app.version" pattern="yyyyMMddHHmmss"/>
+    </tstamp>
 	<property name="dist.dir" value="dist"/>
 	<property name="src" value="src/main/java"/>
 	<property name="resources" value="src/main/resources"/>
@@ -317,4 +320,39 @@
 		<xslt in="${cpd-results}" style="${pmd.home}/etc/xslt/cpdhtml.xslt" out="${reports.dir}/pmd-cpd.html" />
 		<echo message="CPD completed, output is in ${reports.dir}/cpd-ant-results.html."/>
 	</target>
+	
+    <target name="source_tgz" depends="init"
+        description="Builds a source tarball of the SQLPower Library">
+        <tar destfile="${dist.dir}/SQL-Power-SQLPower-Library-src-${app.version}.tar.gz"
+             compression="gzip" longfile="gnu">
+            <tarfileset dir="."
+                prefix="sqlpower-library-src-${app.version}"
+                excludes="build/**,**/*.bak,**/*~,**/TEST*,architect.log*,**/.fbwarnings,deploy/**,.fbprefs,staging/**,antbuild/**,dist/**,findbugs-ant-results.txt,pmd-ant-results.txt,cpd-ant-results.txt,build.log"/>
+        </tar>
+    </target>
+    <!-- Creates a tarball containing only the Java source files -->
+    <target name="source_only_tgz" depends="init"
+        description="Builds a source only tarball of the Architect">
+        <tar destfile="${dist.dir}/SQL-Power-SQLPower-Library-src-only-${app.version}.tar.gz"
+             compression="gzip" longfile="gnu">
+            <tarfileset dir="."
+                prefix="sqlpower-library-src-only-${app.version}"
+                includes="${src}/**/*.java,
+                      ${resources}/**/*.png,
+                      ${resources}/**/*.gif,
+                      ${resources}/**/*.wav,
+                      ${resources}/**/*.script,
+            	      ${resources}/**/*.ini,
+            	      ${resources}/**/*.xml,
+            	      ${resources}/**/*.properties,
+                      ${tests}/**/*.java,
+                      ${tests-resources}/log4j.properties.example,
+                      build.xml,
+                      LICENSE,
+            	      pl.regression.ini,
+            	      .classpath,
+            	      .project
+                      "/>
+        </tar>
+    </target>   
 </project>
