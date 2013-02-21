@@ -99,6 +99,7 @@ public abstract class SQLObject extends AbstractSPObject implements IDBTreeModel
 	 * of length, case, allowable characters, and other requirements.
 	 * Since v1.0.7, it is same to name.
 	 */
+	@Deprecated
 	private String physicalName;
 
 	/**
