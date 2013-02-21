@@ -1,9 +1,11 @@
-#labels Raodmap
-==1.0.7==
+#labels Featured,Phase-Requirements
+==[http://code.google.com/p/power-architect-2013/w/list More wiki]==
+
+=1.0.7=
  * Save/Load physical name into/from Microsoft SQL Server Database
  * Support Simplified Chinese
  * Show non-nullable info
 
-==Next==
+=Next=
  * Support multiple schema
  * Support View etc
