@@ -582,18 +582,13 @@ public class GenericDDLGenerator implements DDLGenerator {
     public void addComment(SQLColumn c) {
         if (c.getRemarks() == null || c.getRemarks().trim().length() == 0) return;
 
-        String schema = getTargetSchema();
-        String tableName = c.getParent().getName();
-        String logicalName = c.getLogicalName();
-        if (schema != null && schema.length() > 0 ) {
-          if (!(c.getName().equals(logicalName))){
-            print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
-                logicalName.replaceAll("'", "''") + "','user','" + 
-                schema + "','table','" + tableName+"','column','" + c.getName() + "'");
-            print(getStatementTerminator());
-          }
-        }
-
+        print("COMMENT ON COLUMN ");
+        print(toQualifiedName(c.getParent()));
+        print(".");
+        print(c.getName());
+        print(" IS '");
+        print(c.getLogicalName().replaceAll("'", "''"));
+        print("'");
         endStatement(StatementType.COMMENT, c);
     }
 
