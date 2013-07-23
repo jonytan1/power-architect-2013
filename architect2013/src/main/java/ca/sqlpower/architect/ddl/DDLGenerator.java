@@ -226,7 +226,7 @@ public interface DDLGenerator {
      * @param table The name of the table to be dropped.
      * @return A SQL statement which will drop the table.
      */
-    public String makeDropTableSQL(String table);
+    public String makeDropTableSQL(String schemaName, String table);
 
     /**
      * Creates and returns a DDL statement which will drop a foreign key relationship in this
@@ -236,7 +236,7 @@ public interface DDLGenerator {
      * @param fkName The name of the key to drop.
      * @return a SQL statement which will drop the key.
      */
-    public String makeDropForeignKeySQL(String fkTable, String fkName);
+    public String makeDropForeignKeySQL(String schemaName, String fkTable, String fkName);
 
 
     // ---------------------- accessors and mutators ----------------------

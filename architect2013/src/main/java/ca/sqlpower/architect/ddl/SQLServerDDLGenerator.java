@@ -404,7 +404,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 		// So we only write a SQL comment with the table's comment here
 
 		if (t.getLogicalName() != null && t.getLogicalName().trim().length() > 0) {
-		      String schema = getTargetSchema();
+		      String schema = t.getSchemaName();
 		      String logicalName = t.getLogicalName();
 		      if (schema != null && schema.length() > 0 ) {
 		        if (!(t.getName().equals(logicalName))){
@@ -424,7 +424,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
     public void addComment(SQLColumn c) {
         if (c.getLogicalName() == null || c.getLogicalName().trim().length() == 0) return;
 
-        String schema = getTargetSchema();
+        String schema = c.getSchemaName();
         String tableName = c.getParent().getName();
         String logicalName = c.getLogicalName();
         if (schema != null && schema.length() > 0 ) {
@@ -533,15 +533,15 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
     @Override
     public void dropPrimaryKey(SQLTable t) {
         SQLIndex pk = t.getPrimaryKeyIndex();
-        print("\nALTER TABLE " + toQualifiedName(t.getName())
+        print("\nALTER TABLE " + toQualifiedName(t.getParent(), t.getName())
                 + " DROP " + pk.getName());
         endStatement(StatementType.DROP, t);
     }
 
     @Override
-    public String makeDropForeignKeySQL(String fkTable, String fkName) {
+    public String makeDropForeignKeySQL(String schemaName, String fkTable, String fkName) {
         return "\nALTER TABLE "
-        +toQualifiedName(fkTable)
+        +toQualifiedName(schemaName, fkTable)
         +" DROP CONSTRAINT "
         +fkName;
     }

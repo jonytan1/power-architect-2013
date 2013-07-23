@@ -55,6 +55,7 @@ import ca.sqlpower.sqlobject.SQLRelationship;
 import ca.sqlpower.sqlobject.SQLRelationship.ColumnMapping;
 import ca.sqlpower.sqlobject.SQLRelationship.Deferrability;
 import ca.sqlpower.sqlobject.SQLRelationship.UpdateDeleteRule;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.sqlobject.SQLType;
 import ca.sqlpower.sqlobject.SQLTypePhysicalProperties.SQLTypeConstraint;
@@ -580,7 +581,7 @@ public class GenericDDLGenerator implements DDLGenerator {
     }
 
     public void addComment(SQLColumn c) {
-        if (c.getRemarks() == null || c.getRemarks().trim().length() == 0) return;
+        if (c.getLogicalName() == null || c.getLogicalName().trim().length() == 0) return;
 
         print("COMMENT ON COLUMN ");
         print(toQualifiedName(c.getParent()));
@@ -605,11 +606,11 @@ public class GenericDDLGenerator implements DDLGenerator {
      * @see #addComment(ca.sqlpower.sqlobject.SQLColumn)
      */
 	public void addComment(SQLTable t, boolean includeColumns) {
-		if (t.getRemarks() != null && t.getRemarks().trim().length() > 0) {
+		if (t.getLogicalName() != null && t.getLogicalName().trim().length() > 0) {
 			print("COMMENT ON TABLE ");
 			print(toQualifiedName(t));
 			print(" IS '");
-			print(t.getRemarks().replaceAll("'", "''"));
+			print(t.getLogicalName().replaceAll("'", "''"));
 			print("'");
 			endStatement(StatementType.COMMENT, t);
 		}
@@ -680,7 +681,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 	}
 	
 	public void dropTable(SQLTable t) {
-        print(makeDropTableSQL(t.getName()));
+        print(makeDropTableSQL( this.getSchemaName(t.getParent()), t.getName()));
         endStatement(StatementType.DROP, t);
     }
 
@@ -1128,14 +1129,14 @@ public class GenericDDLGenerator implements DDLGenerator {
      * schema are omitted if null).
 	 */
 	public String toQualifiedName(SQLTable t) {
-		return toQualifiedName(t.getName());
+		return toQualifiedName(t.getParent(), t.getName());
 	}
 
 	/**
 	 * Creates a qualified name from the physical name of the SQLIndex
 	 */
 	public String toQualifiedName(SQLIndex i) {
-        return toQualifiedName(i.getName());
+        return toQualifiedName(i.getParent().getParent(), i.getName());
     }
 
     /**
@@ -1143,19 +1144,38 @@ public class GenericDDLGenerator implements DDLGenerator {
      * is the non-qualified table name) and this DDL Generator's current
      * target schema and catalog.
      *
+     * @param schemaName The schema name of table tname
      * @param tname The table name to qualify. Must not contain the name separator
      * character (usually '.').
      * @return A string of the form <tt>[catalog.][schema.]table</tt> (catalog and
      * schema are omitted if null).
+     * 
+     * @since version 1.0.8 为支持multi-schema，不再支持 {@link #toQualifiedName(String)}
      */
-    public String toQualifiedName(String tname) {
+    public String toQualifiedName(String schemaName, String tname) {
         String catalog = getTargetCatalog();
-        String schema = getTargetSchema();
 
-        return DDLUtils.toQualifiedName(catalog, schema, tname);
+        return DDLUtils.toQualifiedName(catalog, schemaName, tname);
     }
 
-	// ---------------------- accessors and mutators ----------------------
+    /**
+     * Creates a fully-qualified table name from the given string (which
+     * is the non-qualified table name) and this DDL Generator's current
+     * target schema and catalog.
+     *
+     * @param schema The schema object of the tname
+     * @param tname The table name to qualify. Must not contain the name separator
+     * character (usually '.').
+     * @return A string of the form <tt>[catalog.][schema.]table</tt> (catalog and
+     * schema are omitted if null).
+     * 
+     * @since version 1.0.8 为支持multi-schema，不再支持 {@link #toQualifiedName(String)}
+     */
+    public String toQualifiedName(SQLObject schema, String tname) {
+    	return toQualifiedName( getSchemaName( schema ), tname );
+    }
+
+    // ---------------------- accessors and mutators ----------------------
 
 	/**
 	 * Gets the value of allowConnection
@@ -1293,17 +1313,17 @@ public class GenericDDLGenerator implements DDLGenerator {
     /**
      * Generates a standard <code>DROP TABLE $tablename</code> command.  Should work on most platforms.
      */
-    public String makeDropTableSQL(String table) {
-        return "\nDROP TABLE "+toQualifiedName(table);
+    public String makeDropTableSQL(String schemaName, String table) {
+        return "\nDROP TABLE "+toQualifiedName(schemaName, table);
     }
 
     /**
      * Generates a command for dropping a foreign key which works on some platforms.
      * The statement looks like <code>ALTER TABLE $fktable DROP FOREIGN KEY $fkname</code>.
      */
-    public String makeDropForeignKeySQL(String fkTable, String fkName) {
+    public String makeDropForeignKeySQL(String schemaName, String fkTable, String fkName) {
         return "\nALTER TABLE "
-            +toQualifiedName(fkTable)
+            +toQualifiedName(schemaName, fkTable)
             +" DROP FOREIGN KEY "
             +fkName;
     }
@@ -1314,7 +1334,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 
 	public void dropPrimaryKey(SQLTable t) throws SQLObjectException {
 	    SQLIndex pk = t.getPrimaryKeyIndex();
-	    print("\nALTER TABLE " + toQualifiedName(t.getName())
+	    print("\nALTER TABLE " + toQualifiedName(t)
 	            + " DROP CONSTRAINT " + pk.getName());
 		endStatement(StatementType.DROP, t);
 	}
@@ -1323,7 +1343,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 		Map<String, SQLObject> colNameMap = new HashMap<String, SQLObject>();
 		StringBuffer sqlStatement = new StringBuffer();
 		boolean first = true;
-		sqlStatement.append("\nALTER TABLE "+ toQualifiedName(t.getName())
+		sqlStatement.append("\nALTER TABLE "+ toQualifiedName(t)
 				+ " ADD PRIMARY KEY (");
 		for (SQLColumn c : t.getColumns()) {
 			if (c.isPrimaryKey()) {
@@ -1369,7 +1389,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 		print("ALTER INDEX ");
 		print(toQualifiedName(oldIndex));
 		print(" RENAME TO ");
-		println(toQualifiedName(newIndex.getName()));
+		println(toQualifiedName(newIndex));
 		endStatement(StatementType.ALTER, oldIndex);
 	}
 
@@ -1392,7 +1412,7 @@ public class GenericDDLGenerator implements DDLGenerator {
         }
 
         print("INDEX ");
-        print(toQualifiedName(index.getName()));
+        print(toQualifiedName(index));
         print("\n ON ");
         print(toQualifiedName(index.getParent()));
         print("\n ( ");
@@ -1445,4 +1465,8 @@ public class GenericDDLGenerator implements DDLGenerator {
         return false;
     }
 
+    private String getSchemaName( SQLObject schema ){
+    	if ( schema != null && schema instanceof SQLSchema ) return schema.getName();
+    	return null;
+    }
 }

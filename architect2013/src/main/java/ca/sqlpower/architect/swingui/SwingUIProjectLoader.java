@@ -1020,9 +1020,10 @@ public class SwingUIProjectLoader extends ProjectLoader {
         if (getSession().getDDLGenerator().getTargetCatalog() != null) {
             ioo.niprint(out, " target-catalog=\""+SQLPowerUtils.escapeXML(getSession().getDDLGenerator().getTargetCatalog())+"\""); //$NON-NLS-1$ //$NON-NLS-2$
         }
-        if (getSession().getDDLGenerator().getTargetSchema() != null) {
+        /*支持multi-schema
+         * if (getSession().getDDLGenerator().getTargetSchema() != null) {
             ioo.niprint(out, " target-schema=\""+SQLPowerUtils.escapeXML(getSession().getDDLGenerator().getTargetSchema())+"\""); //$NON-NLS-1$ //$NON-NLS-2$
-        }
+        }*/
         ioo.niprint(out, ">"); //$NON-NLS-1$
         ioo.println(out, "</ddl-generator>"); //$NON-NLS-1$
 		saveLiquibaseSettings(out, session.getLiquibaseSettings());

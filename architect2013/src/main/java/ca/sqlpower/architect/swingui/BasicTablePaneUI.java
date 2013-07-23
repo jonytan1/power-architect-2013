@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ddl.GenericDDLGenerator;
 import ca.sqlpower.sqlobject.SQLColumn;
+import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
 
@@ -472,7 +473,11 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
             fqn.append('.').append(tp.isUsingLogicalNames()? tp.getModel().getLogicalName():tp.getModel().getName());
             return fqn.toString();
         } else {
-            return tp.isUsingLogicalNames()? tp.getModel().getLogicalName():tp.getModel().getName();
+        	SQLObject parent = tp.getModel().getParent();
+        	String parentName = ( parent == null ) ? null : parent.getName();
+        	if ( parentName == null || parentName.trim().isEmpty() ) parentName = "";
+        	else parentName = parentName + ".";
+            return parentName + ( tp.isUsingLogicalNames()? tp.getModel().getLogicalName():tp.getModel().getName() );
         }
     }
 

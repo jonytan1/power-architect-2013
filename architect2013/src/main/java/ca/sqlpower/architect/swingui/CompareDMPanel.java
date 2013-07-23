@@ -30,6 +30,7 @@ import java.awt.event.MouseListener;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -227,6 +228,9 @@ public class CompareDMPanel extends JPanel {
 	 */
 	public class SourceOrTargetStuff {
 
+		private JComboBox playPenSchemaDropDown;
+		private JComboBox loadFileSchemaDropDown;
+		
 		private JComboBox databaseDropdown;
 
 		private JComboBox catalogDropdown;
@@ -664,6 +668,37 @@ public class CompareDMPanel extends JPanel {
             logger.debug("Updated playpen name to " + newPlaypenName);  //$NON-NLS-1$
 		}
 		
+		void refreshLoadFileSchemas(){
+			loadFileSchemaDropDown.setEnabled( false );
+			loadFileSchemaDropDown.removeAllItems();
+			if (new File(loadFilePath.getText()).canRead()) {
+				
+				File f = new File(loadFilePath.getText());
+				InputStream in = null;
+				ArchitectSwingSession newSession = null;
+				try {
+	                // XXX: this will take a non-trivial amount of time, so ideally would be done with a progress bar.
+	                // we might be able to use OpenProjectAction.loadAsynchronously() for this, but it would need a flag for not showing the GUI
+	                // or better yet, set o=f, and do the load itself in the compare worker, because this approach would share the progress bar with the comparison activity itself
+					in = new BufferedInputStream(new FileInputStream(f));
+					newSession = session.getContext().createSession(in);
+					for ( SQLSchema schema : newSession.getTargetDatabase().getChildren( SQLSchema.class ) ) {
+						loadFileSchemaDropDown.addItem(schema);
+					}
+					loadFileSchemaDropDown.setEnabled( true );
+				} catch (FileNotFoundException e) {
+				} catch (SQLObjectException e) {
+				} catch (IOException e) {
+				} finally {
+					if ( in != null )
+						try {
+							in.close();
+						} catch (IOException e) { }
+					if ( newSession != null ) newSession.close();
+				}
+		    }
+		}
+		
 		/**
 		 * Creates the GUI components associated with this object, and appends
 		 * them to the given builder.
@@ -694,6 +729,12 @@ public class CompareDMPanel extends JPanel {
 			buttonGroup.add(physicalRadio);
 			buttonGroup.add(loadRadio);
 
+			Object[] schemas = session.getTargetDatabase().getChildren( SQLSchema.class ).toArray();
+			playPenSchemaDropDown = new JComboBox( schemas );
+			playPenSchemaDropDown.setRenderer(new SchemaCellRenderer(Messages.getString("CompareDMPanel.noSchemas")));
+			if ( schemas.length > 0 ) playPenSchemaDropDown.setSelectedItem( session.getTargetDatabase().getDefaultSchema() );
+			playPenSchemaDropDown.setName(prefix + "PlayPenSchemaDropDown");
+
 			schemaDropdown = new JComboBox();
 			schemaDropdown.setEnabled(false);
 			schemaDropdown.setName(prefix + "SchemaDropdown"); //$NON-NLS-1$
@@ -716,18 +757,26 @@ public class CompareDMPanel extends JPanel {
 			loadFilePath = new JTextField();
 			loadFilePath.setName(prefix + "LoadFilePath"); //$NON-NLS-1$
 
+			loadFileSchemaDropDown = new JComboBox( );
+			loadFileSchemaDropDown.setRenderer(new SchemaCellRenderer(Messages.getString("CompareDMPanel.noSchemas")));
+			loadFileSchemaDropDown.setName(prefix + "LoadFileSchemaDropDown");
+			loadFileSchemaDropDown.setEnabled(false);
+			
 			loadFilePath.setEnabled(false);
 			loadFilePath.getDocument().addDocumentListener(
 					new DocumentListener() {
 						public void insertUpdate(DocumentEvent e) {
+							refreshLoadFileSchemas();
 							startCompareAction.setEnabled(isStartable());
 						}
 
 						public void removeUpdate(DocumentEvent e) {
+							refreshLoadFileSchemas();
 							startCompareAction.setEnabled(isStartable());
 						}
 
 						public void changedUpdate(DocumentEvent e) {
+							refreshLoadFileSchemas();
 							startCompareAction.setEnabled(isStartable());
 						}
 					});
@@ -765,8 +814,10 @@ public class CompareDMPanel extends JPanel {
 
 			if (defaultPlayPen) {
 				playPenRadio.doClick();
+				playPenSchemaDropDown.setEnabled(true);
 			} else {
 				physicalRadio.doClick();
+				playPenSchemaDropDown.setEnabled(false);
 			}
 
 			updatePlayPenNameLabel();
@@ -775,10 +826,10 @@ public class CompareDMPanel extends JPanel {
 			
 			// now give all our shiny new components to the builder
 			builder.append(playPenRadio);
-			builder.append(playPenName, 7);
+			builder.append(playPenName, playPenSchemaDropDown);
 			associate(playPenName, playPenRadio);
 			builder.nextLine();
-
+			
 			builder.append(""); // takes up blank space //$NON-NLS-1$
 			builder.append(physicalRadio);
 			temp = builder.append(Messages.getString("CompareDMPanel.physicalDatabaseLabel")); //$NON-NLS-1$
@@ -798,6 +849,7 @@ public class CompareDMPanel extends JPanel {
 			builder.append(loadRadio);
 			temp = builder.append(Messages.getString("CompareDMPanel.fromFileLabel")); //$NON-NLS-1$
 			associate(temp, loadRadio);
+			builder.append(loadFileSchemaDropDown);
 			builder.nextLine();
 			
 			builder.append(""); // takes up blank space //$NON-NLS-1$
@@ -805,6 +857,8 @@ public class CompareDMPanel extends JPanel {
 			builder.nextColumn(8);
 			builder.append(loadFileButton);
 			builder.nextLine();
+			
+			playPenSchemaDropDown.setPrototypeDisplayValue("TableEditPanel.defaultPlayPenSchema   ");
 
 		}
 
@@ -824,7 +878,8 @@ public class CompareDMPanel extends JPanel {
 				IOException {
 			SQLObject o;
 			if (playPenRadio.isSelected()) {
-				o = session.getTargetDatabase();
+				o = ( SQLObject ) playPenSchemaDropDown.getSelectedItem();
+				if ( o == null )  throw new SQLObjectException(Messages.getString("CompareDMPanel.chooseSchemas"));
 			} else if (physicalRadio.isSelected()) {
 				if (schemaDropdown.getSelectedItem() != null) {
 					o = (SQLObject) schemaDropdown.getSelectedItem();
@@ -838,6 +893,9 @@ public class CompareDMPanel extends JPanel {
 				}
 
 			} else if (loadRadio.isSelected()) {
+				SQLSchema schema = ( SQLSchema ) loadFileSchemaDropDown.getSelectedItem();
+				if ( schema == null ) throw new SQLObjectException(Messages.getString("CompareDMPanel.chooseSchemas"));
+				
 				File f = new File(loadFilePath.getText());
 				InputStream in = new BufferedInputStream(new FileInputStream(f));
                 
@@ -846,8 +904,8 @@ public class CompareDMPanel extends JPanel {
                 // or better yet, set o=f, and do the load itself in the compare worker, because this approach would share the progress bar with the comparison activity itself
 				ArchitectSwingSession newSession = session.getContext().createSession(in);
 				
-                o = newSession.getTargetDatabase();
-                
+                o = newSession.getTargetDatabase().getSchemaByName(schema.getName());
+				if ( o == null ) throw new SQLObjectException(Messages.getString("CompareDMPanel.schemaNotExistInLoadFile"));
 			} else {
 				throw new IllegalStateException(
 						Messages.getString("CompareDMPanel.doNotKnowWhichSourceToCompare")); //$NON-NLS-1$
@@ -869,7 +927,11 @@ public class CompareDMPanel extends JPanel {
 		            Messages.getString("CompareDMPanel.older") : //$NON-NLS-1$
 		            Messages.getString("CompareDMPanel.newer"); //$NON-NLS-1$
 			if (playPenRadio.isSelected()) {
-				result = null;
+				if ( playPenSchemaDropDown.getSelectedItem() == null )	{
+					result = ValidateResult.createValidateResult(
+				            Status.FAIL,
+				            Messages.getString("CompareDMPanel.createPlayPenSchema")); //$NON-NLS-1$
+				} else result = null;
 			} else if (physicalRadio.isSelected()) {
 				if (databaseDropdown.getSelectedItem() == null) {
 				    result = ValidateResult.createValidateResult(
@@ -880,7 +942,11 @@ public class CompareDMPanel extends JPanel {
 				}
 			} else if (loadRadio.isSelected()) {
 			    if (new File(loadFilePath.getText()).canRead()) {
-			        result = null;
+			    	if ( loadFileSchemaDropDown.getSelectedItem() == null ) {
+						result = ValidateResult.createValidateResult(
+					            Status.FAIL,
+					            Messages.getString("CompareDMPanel.chooseSchemas")); //$NON-NLS-1$
+			    	} else result = null;
 			    } else {
 			        result = ValidateResult.createValidateResult(
 			                Status.FAIL,
@@ -918,11 +984,13 @@ public class CompareDMPanel extends JPanel {
 		public class OptionGroupListener implements ActionListener {
 
 			public void actionPerformed(ActionEvent e) {
+				playPenSchemaDropDown.setEnabled(e.getSource() == playPenRadio);
 				enableDisablePhysicalComps();
 
 				boolean enableLoadComps = e.getSource() == loadRadio;
 				loadFilePath.setEnabled(enableLoadComps);
 				loadFileButton.setEnabled(enableLoadComps);
+				loadFileSchemaDropDown.setEditable(enableLoadComps);
 			}
 		}
 

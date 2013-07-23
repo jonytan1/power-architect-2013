@@ -879,4 +879,8 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
     public SPObject getSnapshotContainer() {
         return snapshotContainer;
     }
+    
+	public void refreshTreePath( TreePath tp ) {
+		fireTreeStructureChanged(new TreeModelEvent(tp, tp));
+	}
 }

@@ -447,7 +447,10 @@ public class ProjectLoader {
         d.addFactoryCreate("*/table", tableFactory);
         d.addSetProperties("*/table");
         d.addCallMethod("*/remarks", "setRemarks", 0);
-        d.addSetNext("*/table", "addChild");
+        
+        //兼容打开version 1.0.7以前版本的文件并自动升级到 1.0.8
+        //d.addSetNext("*/table", "addChild");addTableWithSchema
+        d.addSetNext("*/table", "addTableToSchema");
 
         d.addFactoryCreate("*/folder", new SQLFolderFactory());
 
