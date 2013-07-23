@@ -556,4 +556,49 @@ public class TestSQLDatabase extends BaseSQLObjectTestCase {
 		cg2.con.close();
 	}
 	
+	/**
+	 * 非PlayPenDataBase返回""
+	 */
+	public void testGetDefaultSchemaNameNotPlayPenDB(){
+		SQLDatabase db1 = new SQLDatabase();
+		db1.setPlayPenDatabase(false);
+		assertEquals("", db1.getDefaultSchemaName());
+		assertNull(db1.getDefaultSchema());
+		assertEquals(0, db1.getChildren(SQLSchema.class).size());
+	}
+
+	/**
+	 * PlayPenDataBase缺省返回SQLDatabase.defaultSchemaName
+	 */
+	public void testGetDefaultSchemaNamePlayPenDB(){
+		SQLDatabase db1 = new SQLDatabase();
+		db1.setPlayPenDatabase(true);
+		assertEquals(0, db1.getChildren(SQLSchema.class).size());
+		assertEquals("default", db1.getDefaultSchemaName());
+		assertNotNull(db1.getDefaultSchema());
+		assertEquals(1, db1.getChildren(SQLSchema.class).size());
+	}
+	
+	/**
+	 * 非PlayPenDataBase设置DefaultSchemaName无效
+	 */
+	public void testsetDefaultSchemaNameNotPlayPenDB(){
+		SQLDatabase db1 = new SQLDatabase();
+		db1.setPlayPenDatabase(false);
+		db1.setDefaultSchemaName("newschema");
+		assertEquals("", db1.getDefaultSchemaName());
+		assertEquals(0, db1.getChildren(SQLSchema.class).size());
+	}
+	
+	public void testsetDefaultSchemaNamePlayPenDB(){
+		SQLDatabase db1 = new SQLDatabase();
+		db1.setPlayPenDatabase(true);
+		assertEquals(0, db1.getChildren(SQLSchema.class).size());
+		db1.setDefaultSchemaName("newschema");
+		assertEquals("newschema", db1.getDefaultSchemaName());
+		assertEquals(1, db1.getChildren(SQLSchema.class).size());
+		db1.setDefaultSchemaName("newschema2");
+		assertEquals("newschema2", db1.getDefaultSchemaName());
+		assertEquals(2, db1.getChildren(SQLSchema.class).size());
+	}
 }
