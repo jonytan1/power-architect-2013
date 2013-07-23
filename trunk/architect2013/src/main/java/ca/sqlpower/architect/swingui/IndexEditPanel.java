@@ -277,7 +277,7 @@ public class IndexEditPanel extends ChangeListeningDataEntryPanel implements SPL
 
 				// make the physical name identitical as long as there  is
 				// no separate input field for it
-				index.setName(name.getText().trim());
+				index.setLogicalName(name.getText().trim());
 				index.setUnique(unique.isSelected());
                 index.setClustered(clustered.isSelected());
                 if (indexType.getSelectedItem().toString().equals(DEFAULT_INDEX_TYPE)) {

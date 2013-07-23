@@ -46,6 +46,11 @@ import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.sqlobject.SQLTypePhysicalProperties.SQLTypeConstraint;
 import ca.sqlpower.sqlobject.UserDefinedSQLType;
 
+/**
+ * @since version 1.0.8 MySQL的Database名称可以由PlayPenDatabase中的Schema信息替代。
+ * @author jianjun.tan
+ *
+ */
 public class MySqlDDLGenerator extends GenericDDLGenerator {
 
     public MySqlDDLGenerator() throws SQLException {
@@ -366,7 +371,8 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
     @Override
     public String getCatalogTerm() {
-        return "Database";
+        //return "Database";
+    	return null;
     }
 
     @Override
@@ -443,7 +449,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
     @Override
     public void dropPrimaryKey(SQLTable t) {
-        print("\nALTER TABLE " + toQualifiedName(t.getName()) + " DROP PRIMARY KEY");
+        print("\nALTER TABLE " + toQualifiedName(t) + " DROP PRIMARY KEY");
         endStatement(StatementType.DROP, t);
     }
     

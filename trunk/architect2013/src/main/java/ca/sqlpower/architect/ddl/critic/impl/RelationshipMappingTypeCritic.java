@@ -48,7 +48,9 @@ public class RelationshipMappingTypeCritic extends CriticAndSettings {
         if (!(so instanceof ColumnMapping)) return Collections.emptyList();
         ColumnMapping cm = (ColumnMapping) so;
         List<Criticism> criticisms = new ArrayList<Criticism>();
-        if (ArchitectUtils.columnsDiffer(cm.getFkColumn(), cm.getPkColumn())) {
+        
+        //if (ArchitectUtils.columnsDiffer(cm.getFkColumn(), cm.getPkColumn())) {
+        if (ArchitectUtils.relationColumnsDiffer(cm.getFkColumn(), cm.getPkColumn())) {
             final SQLColumn parentColumn = cm.getPkColumn();
             final SQLTable parentTable = parentColumn.getParent();
             final SQLColumn childColumn = cm.getFkColumn();

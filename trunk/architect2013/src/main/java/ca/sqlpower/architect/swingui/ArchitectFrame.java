@@ -95,16 +95,19 @@ import ca.sqlpower.architect.swingui.action.CheckForUpdateAction;
 import ca.sqlpower.architect.swingui.action.CloseProjectAction;
 import ca.sqlpower.architect.swingui.action.CompareDMAction;
 import ca.sqlpower.architect.swingui.action.CopySelectedAction;
+import ca.sqlpower.architect.swingui.action.CreatePlayPenSchemaAction;
 import ca.sqlpower.architect.swingui.action.CreateRelationshipAction;
 import ca.sqlpower.architect.swingui.action.CreateTableAction;
 import ca.sqlpower.architect.swingui.action.CutSelectedAction;
 import ca.sqlpower.architect.swingui.action.DataMoverAction;
 import ca.sqlpower.architect.swingui.action.DataSourcePropertiesAction;
 import ca.sqlpower.architect.swingui.action.DatabaseConnectionManagerAction;
+import ca.sqlpower.architect.swingui.action.DeletePlayPenSchemaAction;
 import ca.sqlpower.architect.swingui.action.DeleteSelectedAction;
 import ca.sqlpower.architect.swingui.action.EditColumnAction;
 import ca.sqlpower.architect.swingui.action.EditCriticSettingsAction;
 import ca.sqlpower.architect.swingui.action.EditLabelAction;
+import ca.sqlpower.architect.swingui.action.EditPlayPenSchemaAction;
 import ca.sqlpower.architect.swingui.action.EditRelationshipAction;
 import ca.sqlpower.architect.swingui.action.EditSelectedAction;
 import ca.sqlpower.architect.swingui.action.EditSelectedIndexAction;
@@ -173,6 +176,9 @@ import com.google.common.collect.HashBiMap;
 /**
  * The Main Window for the Architect Application; contains a main() method that is
  * the conventional way to start the application running.
+ * 
+ * @since version 1.0.8 增加新建、修改和删除Schema的弹出菜单
+ * @author jianjun.tan
  */
 public class ArchitectFrame extends JFrame {
 
@@ -253,6 +259,13 @@ public class ArchitectFrame extends JFrame {
     private AlignTableAction alignTableVerticalAction;
     private FocusToChildOrParentTableAction focusToChildAction;
     private FocusToChildOrParentTableAction focusToParentAction;
+    
+    /**
+     * Operate the schema under playPenDatabase.
+     */
+    private DeletePlayPenSchemaAction deletePlayPenSchemaAction;
+    private CreatePlayPenSchemaAction createPlayPenSchemaAction;
+    private EditPlayPenSchemaAction editPlayPenSchemaAction;
     
     private Action exportDDLAction;
     private Action compareDMAction;
@@ -789,6 +802,10 @@ public class ArchitectFrame extends JFrame {
         selectAllAction.putValue(AbstractAction.ACCELERATOR_KEY,
                 KeyStroke.getKeyStroke(KeyEvent.VK_A, accelMask));
 
+        deletePlayPenSchemaAction = new DeletePlayPenSchemaAction(this);
+        createPlayPenSchemaAction = new CreatePlayPenSchemaAction(this);
+        editPlayPenSchemaAction     = new EditPlayPenSchemaAction(this);
+        
         profileAction = new ProfileAction(this);
         reverseRelationshipAction = new ReverseRelationshipAction(this);
         alignTableHorizontalAction = new AlignTableAction(this, Messages.getString("ArchitectFrame.alignTablesHorizontallyActionName"), Messages.getString("ArchitectFrame.alignTablesHorizontallyActionDescription"), true); //$NON-NLS-1$ //$NON-NLS-2$
@@ -1646,6 +1663,18 @@ public class ArchitectFrame extends JFrame {
 
     public EditLabelAction getEditLabelAction() {
         return editLabelAction;
+    }
+    
+    public DeletePlayPenSchemaAction getDeletePlayPenSchemaAction() {
+    	return deletePlayPenSchemaAction;
+    }
+    
+    public CreatePlayPenSchemaAction getCreatePlayPenSchemaAction() {
+    	return createPlayPenSchemaAction;
+    }
+    
+    public EditPlayPenSchemaAction getEditPlayPenSchemaAction() {
+    	return editPlayPenSchemaAction;
     }
 
     private class TabDropTargetListener implements DropTargetListener {

@@ -361,9 +361,10 @@ public class ArchitectClientSideSession extends ArchitectSessionImpl implements 
     	    if (getDDLGenerator().getTargetCatalog() != null) {
     	        prefs.put(projectLocation.getUUID() + ".targetCatalog", getDDLGenerator().getTargetCatalog());
     	    }
-    	    if (getDDLGenerator().getTargetSchema() != null) {
+    	    /*支持multi-schema
+    	     * if (getDDLGenerator().getTargetSchema() != null) {
     	        prefs.put(projectLocation.getUUID() + ".targetSchema", getDDLGenerator().getTargetSchema());
-    	    }
+    	    }*/
     	    prefs.put(projectLocation.getUUID() + ".ddlg", getDDLGenerator().getClass().getName());
     	}
     	

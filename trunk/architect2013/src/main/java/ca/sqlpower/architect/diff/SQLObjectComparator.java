@@ -50,14 +50,14 @@ public class SQLObjectComparator implements Comparator<SQLObject>, Serializable 
 		    String n1;
 		    String n2;
 		    if (t1.getName() == null || t1.getName().trim().equals("")) {
-		        n1 = t1.getName();
-		    } else {
 		        n1 = t1.getLogicalName();
+		    } else {
+		        n1 = t1.getName();
 		    }
 		    if (t2.getName() == null || t2.getName().trim().equals("")) {
-                n2 = t2.getName();
-            } else {
                 n2 = t2.getLogicalName();
+            } else {
+                n2 = t2.getName();
             }
             if (n1 != null) n1 = n1.toLowerCase(Locale.getDefault());
             if (n2 != null) n2 = n2.toLowerCase(Locale.getDefault());

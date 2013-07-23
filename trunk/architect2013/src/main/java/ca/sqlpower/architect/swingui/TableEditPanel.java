@@ -19,6 +19,7 @@
 package ca.sqlpower.architect.swingui;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.beans.PropertyChangeEvent;
 import java.util.HashMap;
 
@@ -35,11 +36,21 @@ import javax.swing.JTextField;
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.sqlobject.SQLIndex;
+import ca.sqlpower.sqlobject.SQLObject;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.swingui.ChangeListeningDataEntryPanel;
 import ca.sqlpower.swingui.ColorCellRenderer;
 import ca.sqlpower.swingui.ColourScheme;
 
+/**
+ * @since version 1.0.8 Add property "schema".<br>
+ * 1) {@link TableEditPanel(ArchitectSwingSession,SQLTable)}: 增加chema的下拉框，列表是当前PlayPenDB的schema列表<br>
+ * 2) {@link editTable(SQLTable)}: 显示当前表对象所属的schema信息<br>
+ * 3) {@link applyChanges}: 更新schema信息。
+ * @author jianjun.tan
+ *
+ */
 public class TableEditPanel extends ChangeListeningDataEntryPanel {
     
     private static final Logger logger = Logger.getLogger(TableEditPanel.class);
@@ -49,6 +60,7 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
      */
     private JPanel panel;
 	private SQLTable table;
+	private JComboBox playPenSchema;
 	private JTextField logicalName;
 	private JTextField physicalName;
 	private JTextField pkName;
@@ -82,6 +94,16 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 	public TableEditPanel(ArchitectSwingSession session, SQLTable t) {
 		this.panel = new JPanel(new FormLayout());
 		this.tablePane = session.getPlayPen().findTablePane(t);
+		
+        panel.add(new JLabel(Messages.getString("TableEditPanel.schemaNameLabel"))); //$NON-NLS-1$
+        Object[] schemas = session.getTargetDatabase().getChildren( SQLSchema.class ).toArray();
+        playPenSchema = new JComboBox( schemas );
+        
+        playPenSchema.setRenderer(new SchemaCellRenderer( Messages.getString("TableEditPanel.defaultPlayPenSchema")));
+        panel.add(playPenSchema); //$NON-NLS-1$   
+        if ( schemas.length > 1 ) playPenSchema.setSelectedItem(session.getTargetDatabase().getPlayPenSchema(null));
+        playPenSchema.setPrototypeDisplayValue("TableEditPanel.defaultPlayPenSchema   ");
+
         panel.add(new JLabel(Messages.getString("TableEditPanel.tableLogicalNameLabel"))); //$NON-NLS-1$
         panel.add(logicalName = new JTextField("", 30)); //$NON-NLS-1$        
         panel.add(new JLabel(Messages.getString("TableEditPanel.tablePhysicalNameLabel"))); //$NON-NLS-1$
@@ -134,6 +156,14 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
     		dashed.setSelected(tablePane.isDashed());
     		rounded.setSelected(tablePane.isRounded());
 		}
+		
+		SQLObject parent = t.getParent();
+		t.setPlayPenSchemaName( t.getParent() == null ? null : t.getParent().getName() );
+		if ( parent != null ){
+			if (parent instanceof SQLSchema ){
+				playPenSchema.setSelectedItem(parent);
+			}
+		}
 	}
 
 	// --------------------- ArchitectPanel interface ------------------
@@ -156,9 +186,11 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 
 	        table.setName(physicalName.getText());
 	        table.setLogicalName(logicalName.getText());
-	        table.setRemarks(remarks.getText());   
+	        table.setRemarks(remarks.getText());
+	        
+	        table.becomeChildOfSchema( ( SQLSchema ) playPenSchema.getSelectedItem() );
 
-	        if (tablePane != null) {
+			if (tablePane != null) {
 	            tablePane.begin("TableEditPanel.compoundEditName");
 	            if (!tablePane.getBackgroundColor().equals((Color)bgColor.getSelectedItem())) {
 	                tablePane.setBackgroundColor((Color)bgColor.getSelectedItem());
