@@ -430,4 +430,12 @@ public class SQLCatalog extends SQLObject {
 		return allowedChildTypes;
 	}
 	
+	/**
+	 * 增加公共方法{@link #addTableToSchema(SQLObject)}：作为PlayPenDatabase支持Multi-Schema而新增。
+	 * @param child
+	 * @throws SQLObjectException
+	 */
+	public void addTableToSchema(SQLObject child) throws SQLObjectException {
+		this.addChild(child);
+	}
 }

@@ -48,6 +48,7 @@ import ca.sqlpower.sqlobject.SQLTypePhysicalProperties.SQLTypeConstraint;
 import ca.sqlpower.sqlobject.SQLTypePhysicalPropertiesProvider.PropertyType;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
 import ca.sqlpower.sqlobject.dbmeta.IDatabaseMeta;
+import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.UserPrompter;
 import ca.sqlpower.util.UserPrompterFactory;
 
@@ -606,7 +607,8 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 
             	if (upstreamType.getNullability() != null
             			&& upstreamType.getNullability().equals(type.getNullability())) {
-            		type.setMyNullability(null);
+            		//type.setMyNullability(null);
+            		type.setMyNullability(upstreamType.getNullability());
             	}
 
             	if (upstreamType.getDefaultValue(fromPlatform) != null
@@ -616,7 +618,8 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 
             	if (upstreamType.getAutoIncrement() != null
             			&& upstreamType.getAutoIncrement().equals(type.getAutoIncrement())) {
-            		type.setMyAutoIncrement(null);
+            		//type.setMyAutoIncrement(null);
+            		type.setMyAutoIncrement(upstreamType.getAutoIncrement());
             	}
             	
             	type.setUpstreamType(upstreamType);
@@ -1536,4 +1539,17 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 		firePropertyChange("etlNotes", oldNotes, etlNotes);
 	}
 	
+	/**
+	 * @return An empty string if the schema for this table is null;
+	 * otherwise, schema.getSchemaName().
+	 */
+	@Transient @Accessor
+	public String getSchemaName() {
+		SQLSchema schema = SQLPowerUtils.getAncestor(this, SQLSchema.class);
+		if (schema == null) {
+			return "";
+		} else {
+			return schema.getName();
+		}
+	}
 }
