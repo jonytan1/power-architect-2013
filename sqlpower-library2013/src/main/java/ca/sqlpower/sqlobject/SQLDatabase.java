@@ -55,6 +55,21 @@ import ca.sqlpower.sql.JDBCDataSource;
 import ca.sqlpower.sql.SPDataSource;
 import ca.sqlpower.sql.jdbcwrapper.DatabaseMetaDataDecorator;
 
+/**
+ * @since version 1.0.8 playPenDatabase将支持多个Schema。<br>
+ * 当SQLDatabase是playPenDatabase时，Children list是本db下的schema列表。<br>
+ * 修改内容：<br>
+ * 1） 增加属性private SQLSchema defaultSchema = null;<br>
+ * 2） {@link getAllowedChildTypes}方法中，当SQLDatabase是playPenDatabase时，返回SQLSchema类型。<br>
+ * 3） 增加方法 {@link getDefaultSchemaName}——仅SQLDatabase是playPenDatabase时有效<br>
+ * 4） 增加方法 {@link setDefaultSchemaName}——仅SQLDatabase是playPenDatabase时有效<br>
+ * 5） 增加私有方法{@link refreshDefaultSchema}——仅SQLDatabase是playPenDatabase时有效<br>
+ * 6） 增加公共方法{@link getDefaultSchema}——仅SQLDatabase是playPenDatabase时有效<br>
+ * 7） {@link removeSchema}方法中，如果删除的是缺省Schema，则清空缺省Schema。<br>
+ * 8） 增加公共方法{@link #addTableToSchema(SQLObject)}：读取1.0.7以前版本的项目文件时，创建一个缺省Schema。
+ * @author jianjun.tan
+ *
+ */
 public class SQLDatabase extends SQLObject implements java.io.Serializable, PropertyChangeListener {
 
 	private static final long serialVersionUID = 1L;
@@ -113,6 +128,10 @@ public class SQLDatabase extends SQLObject implements java.io.Serializable, Prop
 	private final List<SQLCatalog> catalogs = new ArrayList<SQLCatalog>();
 	
 	private final List<SQLSchema> schemas = new ArrayList<SQLSchema>();
+	
+	private SQLSchema defaultSchema = null;
+	
+	public final static String defaultSchemaName = "default";
 	
 	private final List<SQLTable> tables = new ArrayList<SQLTable>();
 	
@@ -920,6 +939,7 @@ public class SQLDatabase extends SQLObject implements java.io.Serializable, Prop
 			throw new IllegalStateException("Cannot remove child " + child.getName() + 
 					" of type " + child.getClass() + " as its parent is not " + getName());
 		}
+		if ( this.defaultSchema == child ) this.defaultSchema = null;
 		int index = schemas.indexOf(child);
 		if (index != -1) {
 			 schemas.remove(index);
@@ -1013,19 +1033,120 @@ public class SQLDatabase extends SQLObject implements java.io.Serializable, Prop
 	 * The child types for a database change as children are added. This is
 	 * different from most other cases but the order of the allowed children
 	 * will remain the same as the order specified by {@link #allowedChildTypes}.
+	 * 对于playPenDatabase，仅将SQLSchema作为子节点。
 	 */
 	@NonProperty
 	public List<Class<? extends SPObject>> getAllowedChildTypes() {
 		List<Class<? extends SPObject>> types = new ArrayList<Class<? extends SPObject>>();
-		if (schemas.isEmpty() && tables.isEmpty()) {
-			types.add(SQLCatalog.class);
-		}
-		if (catalogs.isEmpty() && tables.isEmpty()) {
+		if ( this.playPenDatabase ){
 			types.add(SQLSchema.class);
-		}
-		if (catalogs.isEmpty() && schemas.isEmpty()) {
-			types.add(SQLTable.class);
+		} else  {
+			if (schemas.isEmpty() && tables.isEmpty()) {
+				types.add(SQLCatalog.class);
+			}
+			if (catalogs.isEmpty() && tables.isEmpty()) {
+				types.add(SQLSchema.class);
+			}
+			if (catalogs.isEmpty() && schemas.isEmpty()) {
+				types.add(SQLTable.class);
+			}
 		}
 		return Collections.unmodifiableList(types);
+	}
+	
+	@NonProperty
+	public String getDefaultSchemaName(){
+		if ( !this.playPenDatabase ) return "";
+		return refreshDefaultSchema( null ).getName();
+	}
+	
+	@NonProperty
+	public void setDefaultSchemaName( String schemaName ){
+		firePropertyChange("defaultSchemaName", (this.defaultSchema == null ? SQLDatabase.defaultSchemaName : this.defaultSchema.getName()), schemaName);
+		if ( !this.playPenDatabase ) return;
+		// 缺省Schema的名称不能为空。
+		if ( schemaName == null || schemaName.trim().length() == 0 ) return;
+		refreshDefaultSchema( schemaName );
+	}
+	
+	/**
+	 * 刷新并获取缺省Schema。（playPenDatabase返回非空对象）<br>
+	 * 1） 不是playPenDatabase，则是null，即没有缺省Schema。<br>
+	 * 2） schemaName为空时：<br>
+	 * 		（1）已经设定了缺省Schema，则直接返回；<br>
+	 * 		（2）未设定，则将Schema列表中第1个元素作为缺省Schema并返回；<br>
+	 * 				若Schema列表空，则创建一个名为default的Schema作为缺省Schema并返回。<br>
+	 * 3） schemaName非空时：<br>
+	 * 		（1）已经设定了缺省Schema且同名，则直接返回；<br>
+	 * 		（2）未设定或者已设定但不同名，则Schema列表中按名查找、更新缺省Schema并返回；<br>
+	 * 				找不到则创建一个、插入Schema列表、更新缺省Schema并返回。<br>
+	 * @param schemaName
+	 * @return
+	 */
+	private SQLSchema refreshDefaultSchema( String schemaName ){
+		if ( !this.playPenDatabase ) return null;
+
+		if ( schemaName == null || schemaName.trim().length() == 0 ) {
+			if ( this.defaultSchema == null ){ 
+				if ( !this.schemas.isEmpty() ) {
+					this.defaultSchema = this.schemas.get(0);
+					return this.schemas.get(0);
+				} else {
+					this.defaultSchema = new SQLSchema(this, defaultSchemaName, true);
+					this.schemas.add(this.defaultSchema);
+					fireChildAdded(SQLSchema.class, this.defaultSchema, this.schemas.size()-1);
+				}
+			}
+			return this.defaultSchema;
+		}
+		
+		schemaName = schemaName.trim();
+		if ( this.defaultSchema != null && schemaName.equalsIgnoreCase(this.defaultSchema.getName()) )
+			return this.defaultSchema;
+		
+		for (SQLSchema child : this.schemas) {
+			if ( schemaName.equalsIgnoreCase(child.getName())){
+				this.defaultSchema = child;
+				return this.defaultSchema;
+			}
+		}
+		this.defaultSchema = new SQLSchema(this, schemaName, true);
+		this.schemas.add(this.defaultSchema);
+		fireChildAdded(SQLSchema.class, this.defaultSchema, this.schemas.size()-1);
+		
+		return this.defaultSchema;
+		
+	}
+	
+	/**
+	 * 外部对象获取本对象的缺省Schema。
+	 * @return
+	 */
+	@NonProperty
+	public SQLSchema getDefaultSchema(){
+		return this.refreshDefaultSchema( null );
+	}
+
+	/**
+	 * 按名称获取本对象下的schema，如果不存在，则创建一个。
+	 * @param name
+	 * @return
+	 */
+	@NonProperty
+	public SQLSchema getPlayPenSchema( String name ){
+		return this.refreshDefaultSchema( name );
+	}
+	
+	/**
+	 * 读取1.0.7以前版本的项目文件时，创建一个缺省Schema。作为PlayPenDatabase支持Multi-Schema而新增。
+	 * @param child
+	 * @throws SQLObjectException
+	 */
+	public void addTableToSchema(SQLObject child) throws SQLObjectException {
+		if ( this.isPlayPenDatabase() && child instanceof SQLTable ){
+			this.getDefaultSchema().addChild(child);
+			return;
+		}
+		this.addChild(child);
 	}
 }

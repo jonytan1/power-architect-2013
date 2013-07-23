@@ -51,6 +51,16 @@ import ca.sqlpower.util.SessionNotFoundException;
 
 import com.google.common.collect.ListMultimap;
 
+/**
+ * @since version 1.0.8 对于playPenDatabase的SQLDatabase，SQLTable的parent是schema。<br>
+ * 变更内容：<br>
+ * {@link #createTableFromSource}：生成的SQLTable对象的直接父节点是playPenDatabase的某个Schema。<br>
+ * {@link #getPlayPenSchemaName}：获取编辑表信息时所选择的Schema。<br>
+ * {@link #setPlayPenSchemaName(String)}：保留编辑表信息时所选择的Schema。<br>
+ * {@link #becomeChildOfSchema(SQLSchema)}：修改本对象所属的Schema。<br>
+ * @author jianjun.tan
+ *
+ */
 public class SQLTable extends SQLObject {
 	
 	/**
@@ -137,6 +147,11 @@ public class SQLTable extends SQLObject {
      * Determinant of whether this table's imported keys have been populated.
      */
     private boolean importedKeysPopulated = false;
+    
+    /**
+     * 仅当编辑PlayPenDatabase中的表对象信息时有效。
+     */
+    private String playPenSchemaName=null;
     
     public SQLTable(SQLObject parent, String name, String remarks, String objectType, 
     		boolean startPopulated) throws SQLObjectException {
@@ -308,7 +323,12 @@ public class SQLTable extends SQLObject {
 		populateRelationships();
 		populateImportedKeys();
         SQLIndex newPKIndex = new SQLIndex();
-        SQLTable t = new SQLTable(parent, getName(), remarks, "TABLE", true, newPKIndex);
+        
+        SQLObject actualParent = parent;
+        if ( parent.isPlayPenDatabase() ) actualParent = parent.getPlayPenSchema(this.getParent().getName());
+        
+        SQLTable t = new SQLTable(actualParent, getName(), remarks, "TABLE", true, newPKIndex);
+        
         t.setLogicalName(this.getLogicalName());
 		for (Map.Entry<Class<? extends SQLObject>, Throwable> inaccessibleReason : getChildrenInaccessibleReasons().entrySet()) {
         	t.setChildrenInaccessibleReason(inaccessibleReason.getValue(), inaccessibleReason.getKey(), false);
@@ -317,7 +337,7 @@ public class SQLTable extends SQLObject {
 		t.inherit(this, transferStyle, preserveColumnSource);
         inheritIndices(this, t);
         
-		parent.addChild(t);
+        actualParent.addChild(t);
 		return t;
 	}
 	
@@ -1411,6 +1431,12 @@ public class SQLTable extends SQLObject {
 	 */
 	@Mutator
 	public void setParent(SQLObject parent) {
+		if ( parent instanceof SQLDatabase ){
+			SQLDatabase db = ( SQLDatabase ) parent;
+			if( db.isPlayPenDatabase() ){
+				super.setParent(db.getDefaultSchema());
+			}
+		}
 		super.setParent(parent);
 	}
 
@@ -2194,10 +2220,64 @@ public class SQLTable extends SQLObject {
 		return primaryKeyIndex;
 	}
 	
+	/**
+	 * 获取DBTree区域显示的本SQLTable的标题。
+	 */
 	@NonProperty @Override
 	public String getTreeCellTitle(  boolean isUsingLogicalNames ){
 		String title = super.getTreeCellTitle(isUsingLogicalNames);
 		return ( this.objectType == null ? title : title + " (" + this.objectType + ")" );
+	}
+	
+	/**
+	 * 在修改SQLTable对象时，如果本对象在playPenDatabase下，则修改所属Schema。<br>
+	 * 创建SQLTable对象时，由于不在playPenDatabase下，所以无效<br>
+	 * （{@link ca.sqlpower.architect.swingui.action.CreateTableAction.DataEntryPanel.applyChanges}会做补充修改）
+	 * @param newSchema
+	 */
+	public void becomeChildOfSchema( SQLSchema newSchema ){
+        this.setPlayPenSchemaName( newSchema == null ? null : newSchema.getName());
+
+        SQLDatabase playPenDB = this.getParentDatabase();
+        if ( playPenDB == null ){
+        	return;
+        }
+        if ( playPenDB != null && playPenDB.isPlayPenDatabase() ){
+        	SQLObject parent = this.getParent();
+        	if ( parent != newSchema ){
+        		try {
+        			if ( parent != null && parent instanceof SQLSchema ) ( ( SQLSchema ) parent).disconnectTable(this);
+	        		if ( newSchema != null ) {
+	        			newSchema.addChild(this);
+	        		}
+				} catch (IllegalArgumentException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (SQLObjectException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        	}
+        }
+	}
+	
+	/**
+	 * 获取编辑表信息时所选择的Schema。
+	 * @return
+	 */
+	@NonProperty
+	public String getPlayPenSchemaName() {
+		return playPenSchemaName;
+	}
+
+	/**
+	 * 保留编辑表信息时所选择的Schema。
+	 * @param playPenSchemaName
+	 */
+	@NonProperty
+	public void setPlayPenSchemaName(String playPenSchemaName) {
+		this.firePropertyChange("playPenSchemaName", this.playPenSchemaName, playPenSchemaName);
+		this.playPenSchemaName = playPenSchemaName;
 	}
 	
 }

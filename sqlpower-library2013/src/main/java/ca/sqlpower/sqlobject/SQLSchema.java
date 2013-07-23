@@ -23,6 +23,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,8 +34,11 @@ import ca.sqlpower.object.annotation.Accessor;
 import ca.sqlpower.object.annotation.Constructor;
 import ca.sqlpower.object.annotation.ConstructorParameter;
 import ca.sqlpower.object.annotation.Mutator;
+import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.util.SQLPowerUtils;
+import ca.sqlpower.sqlobject.comparator.SQLTableComparator;
+import ca.sqlpower.sqlobject.comparator.SQLTableComparatorFactory;
 
 /**
  * A SQLSchema is a container for SQLTables.  If it is in the
@@ -48,6 +52,11 @@ public class SQLSchema extends SQLObject {
 	 */
 	private static final long serialVersionUID = 8253798657595896552L;
 
+	private SQLTableComparator sortComparator = 
+			SQLTableComparatorFactory.createSQLTableComparator(SQLTableComparator.Type.ByName);
+	
+	private List<SQLTable> sortedList = new ArrayList<SQLTable>();
+
 	/**
 	 * Defines an absolute ordering of the child types of this class.
 	 */
@@ -57,6 +66,9 @@ public class SQLSchema extends SQLObject {
 	private static final Logger logger = Logger.getLogger(SQLSchema.class);
 	
 	private final List<SQLTable> tables = new ArrayList<SQLTable>();
+	
+	private boolean resort = false;
+	
 	
     /**
      * Creates a list of unpopulated Schema objects corresponding to the list of
@@ -251,8 +263,10 @@ public class SQLSchema extends SQLObject {
      *            list must be of the same type.
      */
 	static void populateSchemaWithList(SQLSchema schema, List<SQLTable> children) {
-        try {
+		boolean oldResort = schema.resort;
+		try {
             for (SQLTable table : children) {
+            	schema.resort = true;
                 schema.tables.add(table);
                 table.setParent(schema);
             }
@@ -269,6 +283,7 @@ public class SQLSchema extends SQLObject {
             for (SQLTable table : children) {
                 schema.tables.remove(table);
             }
+            schema.resort = oldResort;
             schema.populated = false;
             throw new RuntimeException(e);
         }
@@ -319,7 +334,8 @@ public class SQLSchema extends SQLObject {
 
 	@Override
 	public List<SQLTable> getChildrenWithoutPopulating() {
-		return Collections.unmodifiableList(new ArrayList<SQLTable>(tables));
+		//return Collections.unmodifiableList(new ArrayList<SQLTable>(tables));
+		return Collections.unmodifiableList(new ArrayList<SQLTable>(getSortedList()));
 	}
 
 	@Override
@@ -332,6 +348,22 @@ public class SQLSchema extends SQLObject {
 		}
 	}
 	
+	public boolean disconnectTable( SQLTable table ){
+		if (isMagicEnabled() && table.getParent() != this) {
+			throw new IllegalStateException("Cannot remove child " + table.getName() + 
+					" of type " + table.getClass() + " as its parent is not " + getName());
+		}
+		int index = tables.indexOf(table);
+		if (index != -1) {
+			 tables.remove(index);
+			 resort = true;
+			 fireChildRemoved(SQLTable.class, table, index);
+			 table.setParent(null);
+			 return true;
+		}
+		return false;
+	}
+	
 	public boolean removeTable(SQLTable table) {
 		if (isMagicEnabled() && table.getParent() != this) {
 			throw new IllegalStateException("Cannot remove child " + table.getName() + 
@@ -341,6 +373,7 @@ public class SQLSchema extends SQLObject {
 		int index = tables.indexOf(table);
 		if (index != -1) {
 			 tables.remove(index);
+			 resort = true;
 			 fireChildRemoved(SQLTable.class, table, index);
 			 table.setParent(null);
 			 return true;
@@ -375,6 +408,7 @@ public class SQLSchema extends SQLObject {
 	
 	public void addTable(SQLTable table, int index) {
 		tables.add(index, table);
+		resort = true;
 		table.setParent(this);
 		fireChildAdded(SQLTable.class, table, index);
 	}
@@ -383,4 +417,50 @@ public class SQLSchema extends SQLObject {
 		return allowedChildTypes;
 	}
 
+	/**
+	 * 增加公共方法{@link #addTableToSchema(SQLObject)}：作为PlayPenDatabase支持Multi-Schema而新增。
+	 * @param child
+	 * @throws SQLObjectException
+	 */
+	public void addTableToSchema(SQLObject child) throws SQLObjectException {
+		this.addChild(child);
+	}
+	
+	/**
+	 * 设定排序比较器。
+	 * @param type
+	 */
+	@NonProperty
+	public void setSortComparator( SQLTableComparator.Type type ){
+		sortComparator = SQLTableComparatorFactory.createSQLTableComparator(type);
+		resort = true;
+	}
+	
+	/**
+	 * 当前使用的排序比较器是否为指定的比较器。
+	 * @param type
+	 * @return
+	 */
+	public boolean isComparator( SQLTableComparator.Type type ) {
+		return sortComparator.isComparator(type);
+	}
+	
+	/**
+	 * 获得排序过的子节点列表。
+	 * @return
+	 */
+	@NonProperty
+	private synchronized List<SQLTable> getSortedList(){
+		if ( this.resort ){
+			SQLTable[] children = tables.toArray(new SQLTable[]{});
+    		Arrays.sort( children, sortComparator);
+    		List<SQLTable> newList = new ArrayList<SQLTable>();
+    		for ( int i = 0; i < children.length; i++ ){
+    			newList.add(children[i]);
+    		}
+    		this.resort = false;
+    		sortedList = newList;
+		}
+		return sortedList;
+	}
 }
