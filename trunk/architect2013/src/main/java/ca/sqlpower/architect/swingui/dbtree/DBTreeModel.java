@@ -249,7 +249,14 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
                     }
                 }
             }
-            events.add(new TreeModelEvent(DBTreeModel.this, getPathToNode(parent), new int[]{change.getIndex()}, new Object[]{child}));
+            int index = change.getIndex();
+            if ( parent instanceof SQLObject ) {
+            	List<? extends SQLObject> list = ((SQLObject)parent).getChildrenWithoutPopulating();
+            	index = list.indexOf(child);
+            	if ( index < 0 ) index = change.getIndex();
+            }
+            
+            events.add(new TreeModelEvent(DBTreeModel.this, getPathToNode(parent), new int[]{index}, new Object[]{child}));
             return events;
         }
 
