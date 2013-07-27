@@ -124,6 +124,7 @@ public class EditPlayPenSchemaAction extends AbstractArchitectAction {
 		    			}
 		    		} else {
 		    			schema.setName(schemaName);
+		    			schema.setLogicalName(schemaName);
 		    			input = ( db.getPlayPenSchema(schemaName) == null );
 		    		}
 		        }
