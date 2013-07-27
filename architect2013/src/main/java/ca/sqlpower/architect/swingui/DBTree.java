@@ -46,10 +46,8 @@ import java.util.Set;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
-import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JComponent;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -59,7 +57,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.TransferHandler;
-import javax.swing.event.TreeModelEvent;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
@@ -91,8 +88,7 @@ import ca.sqlpower.sqlobject.SQLObjectUtils;
 import ca.sqlpower.sqlobject.SQLRelationship;
 import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
-import ca.sqlpower.sqlobject.SQLTable.TransferStyles;
-import ca.sqlpower.sqlobject.comparator.SQLTableComparator;
+import ca.sqlpower.sqlobject.comparator.SQLObjectComparator;
 import ca.sqlpower.swingui.JDBCDataSourcePanel;
 import ca.sqlpower.swingui.JTreeCollapseAllAction;
 import ca.sqlpower.swingui.JTreeExpandAllAction;
@@ -218,7 +214,7 @@ public class DBTree extends JTree implements DragSourceListener {
                 cutSelection();
             }
         });
-        this.setTransferHandler( new DBTreeTransferHandler(treeModel) );
+        this.setTransferHandler( new DBTreeTransferHandler() );
 	}
 	
 	// ----------- INSTANCE METHODS ------------
@@ -451,11 +447,11 @@ public class DBTree extends JTree implements DragSourceListener {
             sort.add( new SortCheckBoxMenuItem(
             		Messages.getString("DBTree.sortedByNameMenu"), 
             		(DBTreeModel) this.getModel(), p,
-            		schema, SQLTableComparator.Type.ByName ) );
+            		schema, SQLObjectComparator.Type.ByName ) );
             sort.add( new SortCheckBoxMenuItem(
             		Messages.getString("DBTree.sortedByLogicalNameMenu"), 
             		(DBTreeModel) this.getModel(), p,
-            		schema, SQLTableComparator.Type.ByLogicalName ) );
+            		schema, SQLObjectComparator.Type.ByLogicalName ) );
             newMenu.add(sort);
         }
         
@@ -1260,12 +1256,6 @@ public class DBTree extends JTree implements DragSourceListener {
 		 * 
 		 */
 		private static final long serialVersionUID = 6970349716552751092L;
-		private final DBTreeModel model;
-		
-		public DBTreeTransferHandler( DBTreeModel model ){
-			super();
-			this.model = model;
-		}
 
 		@Override
     	public boolean canImport( TransferHandler.TransferSupport support ) {
@@ -1331,7 +1321,6 @@ public class DBTree extends JTree implements DragSourceListener {
                     }
 
                     targetSchema.commit();
-                    model.refreshTreePath(targetPath.getParentPath());
                     return true;
     	        } catch (Throwable e) {
     	        	targetSchema.rollback("Error occurred: " + e.toString());
@@ -1349,7 +1338,7 @@ public class DBTree extends JTree implements DragSourceListener {
 		private static final long serialVersionUID = 4129646006596377921L;
 
 		public SortCheckBoxMenuItem( String title, final DBTreeModel model, final TreePath tp,
-				final SQLSchema sortedSchema, final SQLTableComparator.Type type) {
+				final SQLSchema sortedSchema, final SQLObjectComparator.Type type) {
             super(title);
     		boolean sortedEnabled = sortedSchema.isComparator(type);
             this.setSelected(sortedEnabled);
