@@ -10,6 +10,12 @@ import java.util.ListIterator;
 import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.comparator.SQLObjectComparator.Type;
 
+/**
+ * 
+ * @author jianjun.tan
+ *
+ * @param <E>
+ */
 public class ArraySortedList<E extends SQLObject> implements SortedList<E> {
 	
 	private SQLObjectComparator<E> comparator;
