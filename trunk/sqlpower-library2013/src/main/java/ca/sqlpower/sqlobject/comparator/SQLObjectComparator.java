@@ -20,16 +20,16 @@ package ca.sqlpower.sqlobject.comparator;
 
 import java.util.Comparator;
 
-import ca.sqlpower.sqlobject.SQLTable;
+import ca.sqlpower.sqlobject.SQLObject;
 
 /**
  * 
  * @author jianjun.tan
  *
  */
-public interface SQLTableComparator extends Comparator<SQLTable> {
+public interface SQLObjectComparator<E extends SQLObject> extends Comparator<E> {
 	public enum Type{ ByName, ByLogicalName };
-	public boolean isComparator( SQLTableComparator.Type type );
+	public boolean isComparator( SQLObjectComparator.Type type );
 	@Override
-	public int compare(SQLTable o1, SQLTable o2);
+	public int compare(E o1, E o2);
 }

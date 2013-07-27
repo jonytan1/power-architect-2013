@@ -19,38 +19,32 @@
 package ca.sqlpower.sqlobject.comparator;
 
 import java.io.Serializable;
-import java.util.Comparator;
 import java.util.Locale;
 
-import ca.sqlpower.sqlobject.SQLTable;
+import ca.sqlpower.sqlobject.SQLObject;
 
 /**
  * 
  * @author jianjun.tan
  *
  */
-public class SQLTableNameComparator implements SQLTableComparator, Serializable {
+public class SQLObjectLogicalNameComparator<E extends SQLObject> implements SQLObjectComparator<E>, Serializable {
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 8376260275198025279L;
-	private static SQLTableNameComparator instance = new SQLTableNameComparator();
+	private static final long serialVersionUID = 5348517331522189770L;
 	
-	private SQLTableNameComparator() {}
-
-	public static SQLTableNameComparator getInstance() {
-		return instance;
-	}
+	public SQLObjectLogicalNameComparator() {}
 
 	@Override
-	public int compare(SQLTable o1, SQLTable o2) {
+	public int compare(E o1, E o2) {
 		if ( o1 == o2 ) return 0;
 		else if ( o1 == null ) return -1;
 		else if ( o2 == null ) return 1;
 		else {
-			String s1 = o1.getName();
-			String s2 = o2.getName();
+			String s1 = o1.getLogicalName();
+			String s2 = o2.getLogicalName();
 			s1 = ( s1 == null ? "" : s1.trim().toLowerCase(Locale.getDefault()) );
 			s2 = ( s2 == null ? "" : s2.trim().toLowerCase(Locale.getDefault()) );
 			if ( s1.equalsIgnoreCase( s2 ) ) return 0;
@@ -61,7 +55,7 @@ public class SQLTableNameComparator implements SQLTableComparator, Serializable 
 	}
 
 	@Override
-	public boolean isComparator(SQLTableComparator.Type type) {
-		return type==SQLTableComparator.Type.ByName;
+	public boolean isComparator(SQLObjectComparator.Type type) {
+		return type==SQLObjectComparator.Type.ByLogicalName;
 	}
 }

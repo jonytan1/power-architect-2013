@@ -18,14 +18,19 @@
  */
 package ca.sqlpower.sqlobject.comparator;
 
+import ca.sqlpower.sqlobject.SQLObject;
+import ca.sqlpower.sqlobject.SQLTable;
+
 /**
  * 
  * @author jianjun.tan
  *
  */
-public class SQLTableComparatorFactory {
-	public static SQLTableComparator createSQLTableComparator( SQLTableComparator.Type type ){
-		if ( type == SQLTableComparator.Type.ByName ) return SQLTableNameComparator.getInstance();
-		else return SQLTableLogicalNameComparator.getInstance();
+public class SQLObjectComparatorFactory<E extends SQLObject> {
+	public SQLObjectComparatorFactory(){}
+	
+	public SQLObjectComparator<E> createSQLObjectComparator( SQLObjectComparator.Type type ){
+		if ( type == SQLObjectComparator.Type.ByName ) return new SQLObjectNameComparator<E>();
+		else return new SQLObjectLogicalNameComparator<E>();
 	}
 }

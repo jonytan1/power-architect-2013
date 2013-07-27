@@ -37,8 +37,10 @@ import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.util.SQLPowerUtils;
-import ca.sqlpower.sqlobject.comparator.SQLTableComparator;
-import ca.sqlpower.sqlobject.comparator.SQLTableComparatorFactory;
+import ca.sqlpower.sqlobject.comparator.ArraySortedList;
+import ca.sqlpower.sqlobject.comparator.SQLObjectComparator;
+import ca.sqlpower.sqlobject.comparator.SQLObjectComparatorFactory;
+import ca.sqlpower.sqlobject.comparator.SortedList;
 
 /**
  * A SQLSchema is a container for SQLTables.  If it is in the
@@ -52,11 +54,6 @@ public class SQLSchema extends SQLObject {
 	 */
 	private static final long serialVersionUID = 8253798657595896552L;
 
-	private SQLTableComparator sortComparator = 
-			SQLTableComparatorFactory.createSQLTableComparator(SQLTableComparator.Type.ByName);
-	
-	private List<SQLTable> sortedList = new ArrayList<SQLTable>();
-
 	/**
 	 * Defines an absolute ordering of the child types of this class.
 	 */
@@ -65,10 +62,7 @@ public class SQLSchema extends SQLObject {
 	
 	private static final Logger logger = Logger.getLogger(SQLSchema.class);
 	
-	private final List<SQLTable> tables = new ArrayList<SQLTable>();
-	
-	private boolean resort = false;
-	
+	private final SortedList<SQLTable> tables = new ArraySortedList<SQLTable>( new SQLTable[]{} );
 	
     /**
      * Creates a list of unpopulated Schema objects corresponding to the list of
@@ -263,10 +257,8 @@ public class SQLSchema extends SQLObject {
      *            list must be of the same type.
      */
 	static void populateSchemaWithList(SQLSchema schema, List<SQLTable> children) {
-		boolean oldResort = schema.resort;
 		try {
             for (SQLTable table : children) {
-            	schema.resort = true;
                 schema.tables.add(table);
                 table.setParent(schema);
             }
@@ -283,7 +275,6 @@ public class SQLSchema extends SQLObject {
             for (SQLTable table : children) {
                 schema.tables.remove(table);
             }
-            schema.resort = oldResort;
             schema.populated = false;
             throw new RuntimeException(e);
         }
@@ -334,8 +325,7 @@ public class SQLSchema extends SQLObject {
 
 	@Override
 	public List<SQLTable> getChildrenWithoutPopulating() {
-		//return Collections.unmodifiableList(new ArrayList<SQLTable>(tables));
-		return Collections.unmodifiableList(new ArrayList<SQLTable>(getSortedList()));
+		return Collections.unmodifiableList(new ArrayList<SQLTable>(tables));
 	}
 
 	@Override
@@ -356,7 +346,6 @@ public class SQLSchema extends SQLObject {
 		int index = tables.indexOf(table);
 		if (index != -1) {
 			 tables.remove(index);
-			 resort = true;
 			 fireChildRemoved(SQLTable.class, table, index);
 			 table.setParent(null);
 			 return true;
@@ -373,7 +362,6 @@ public class SQLSchema extends SQLObject {
 		int index = tables.indexOf(table);
 		if (index != -1) {
 			 tables.remove(index);
-			 resort = true;
 			 fireChildRemoved(SQLTable.class, table, index);
 			 table.setParent(null);
 			 return true;
@@ -407,10 +395,11 @@ public class SQLSchema extends SQLObject {
 	}
 	
 	public void addTable(SQLTable table, int index) {
-		tables.add(index, table);
-		resort = true;
+		//ArraySortedList will add the table section at the apposite position. Not the end of tables.
+		//tables.add(index, table);
+		tables.add(table);
 		table.setParent(this);
-		fireChildAdded(SQLTable.class, table, index);
+		fireChildAdded(SQLTable.class, table, tables.indexOf(table));
 	}
 
 	public List<Class<? extends SPObject>> getAllowedChildTypes() {
@@ -431,9 +420,8 @@ public class SQLSchema extends SQLObject {
 	 * @param type
 	 */
 	@NonProperty
-	public void setSortComparator( SQLTableComparator.Type type ){
-		sortComparator = SQLTableComparatorFactory.createSQLTableComparator(type);
-		resort = true;
+	public void setSortComparator( SQLObjectComparator.Type type ){
+		tables.setSortComparator(type);
 	}
 	
 	/**
@@ -441,26 +429,8 @@ public class SQLSchema extends SQLObject {
 	 * @param type
 	 * @return
 	 */
-	public boolean isComparator( SQLTableComparator.Type type ) {
-		return sortComparator.isComparator(type);
+	public boolean isComparator( SQLObjectComparator.Type type ) {
+		return tables.isComparator(type);
 	}
 	
-	/**
-	 * 获得排序过的子节点列表。
-	 * @return
-	 */
-	@NonProperty
-	private synchronized List<SQLTable> getSortedList(){
-		if ( this.resort ){
-			SQLTable[] children = tables.toArray(new SQLTable[]{});
-    		Arrays.sort( children, sortComparator);
-    		List<SQLTable> newList = new ArrayList<SQLTable>();
-    		for ( int i = 0; i < children.length; i++ ){
-    			newList.add(children[i]);
-    		}
-    		this.resort = false;
-    		sortedList = newList;
-		}
-		return sortedList;
-	}
 }
