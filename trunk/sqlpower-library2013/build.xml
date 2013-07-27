@@ -332,7 +332,7 @@
     </target>
     <!-- Creates a tarball containing only the Java source files -->
     <target name="source_only_tgz" depends="init"
-        description="Builds a source only tarball of the Architect">
+        description="Builds a source only tarball of the SQLPower Library">
         <tar destfile="${dist.dir}/SQL-Power-SQLPower-Library-src-only-${app.version}.tar.gz"
              compression="gzip" longfile="gnu">
             <tarfileset dir="."
