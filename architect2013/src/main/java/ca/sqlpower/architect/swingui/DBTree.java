@@ -961,7 +961,7 @@ public class DBTree extends JTree implements DragSourceListener {
   			    if (transferObject != null) {
   			        // TODO add undo event
   			        
-  			        dge.getSourceAsDragGestureRecognizer().setSourceActions(DnDConstants.ACTION_COPY);
+  			        dge.getSourceAsDragGestureRecognizer().setSourceActions(DnDConstants.ACTION_COPY_OR_MOVE);
   			        dge.getDragSource().startDrag
   			                (dge,
   			                null, //DragSource.DefaultCopyNoDrop,
@@ -1262,13 +1262,23 @@ public class DBTree extends JTree implements DragSourceListener {
     		if ( !( support.getDropLocation() instanceof JTree.DropLocation) ) return false;
     		Transferable t = support.getTransferable();
     		if ( !support.isDrop() ) return false;
-    	    if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
+    		
+    		TreePath targetPath = getTargetTreePath( ( JTree.DropLocation ) support.getDropLocation() );
+    		SQLSchema targetSchema = getTargetSchema( targetPath );
+    		if ( targetSchema == null ) return false;
+    		
+			int action = ( MOVE & support.getSourceDropActions() );
+			if ( action == 0 ) return false;
+			support.setDropAction( action );
+
+    		if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
     	        try {
                     SQLObject[] paths = (SQLObject[]) t.getTransferData(
                             SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR);
                     for (SQLObject oo : paths) {
                         if (oo instanceof SQLTable) {
                         	SQLTable table = (SQLTable) oo;
+                        	if ( table.getParent() == targetSchema ) return false;
                         	if ( !table.getParentDatabase().isPlayPenDatabase() ) 
                         		return false;;
                         } else {
@@ -1278,8 +1288,7 @@ public class DBTree extends JTree implements DragSourceListener {
     	        } catch (Throwable e) {
     	            return false;
     	        }
-    	        return getTargetSchema( 
-    	        		getTargetTreePath( ( JTree.DropLocation ) support.getDropLocation() ) ) != null;
+    	        return true;
     	    }
   			return false;
     	}
