@@ -46,6 +46,7 @@ import ca.sqlpower.architect.olap.MondrianModel.VirtualCube;
 import ca.sqlpower.architect.swingui.ASUtils;
 import ca.sqlpower.architect.swingui.ArchitectFrame;
 import ca.sqlpower.architect.swingui.ArchitectSwingSession;
+import ca.sqlpower.architect.swingui.Messages;
 import ca.sqlpower.architect.swingui.PlayPen;
 import ca.sqlpower.architect.swingui.action.AbstractArchitectAction;
 import ca.sqlpower.architect.swingui.olap.CubePane;
@@ -78,11 +79,11 @@ public class ImportSchemaAction extends AbstractArchitectAction {
     private static final Point INITIAL_POINT = new Point(50, 50);
     
     public ImportSchemaAction(ArchitectSwingSession session) {
-        super(session, "Import Schema...", "Imports an OLAP schema"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        super(session, Messages.getString("OLAP.ImportSchemaName"), Messages.getString("OLAP.ImportSchemaDescription")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
     
     public ImportSchemaAction(ArchitectFrame frame) {
-        super(frame, "Import Schema...", "Imports an OLAP schema");
+        super(frame, Messages.getString("OLAP.ImportSchemaName"), Messages.getString("OLAP.ImportSchemaDescription"));
     }
 
     public void actionPerformed(ActionEvent e) {
