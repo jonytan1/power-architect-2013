@@ -1646,7 +1646,7 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 		public ColumnMapping(@ConstructorParameter(parameterType=ParameterType.PROPERTY, propertyName="pkColumn") SQLColumn pkColumn) {
 			this();
 			setPkColumn(pkColumn);
-			pkColumn.addReference();
+			if (pkColumn != null) pkColumn.addReference();
 			loading = true;
 		}
 

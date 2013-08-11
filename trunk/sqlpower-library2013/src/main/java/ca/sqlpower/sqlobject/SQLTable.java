@@ -183,7 +183,7 @@ public class SQLTable extends SQLObject {
      */
     private void setup(SQLObject parent, String name, String remarks, String objectType) {
         super.setParent(parent);
-		super.setName(name);  // this.setName will try to be far to fancy at this point, and break stuff
+		super.setName(name == null ? "" : name);  // this.setName will try to be far to fancy at this point, and break stuff
 		this.remarks = remarks;
 		this.objectType = objectType;
 		super.setPhysicalName(name);
