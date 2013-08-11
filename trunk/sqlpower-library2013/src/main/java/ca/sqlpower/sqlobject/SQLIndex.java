@@ -805,7 +805,7 @@ public class SQLIndex extends SQLObject {
 										namedPositions.getKey(), true);
 							} else {
 								logger.error("Column " + namedPositions.getValue() + " not found in " + targetTable);
-								throw new RuntimeException("Column " + col.getName() + " not found in " + targetTable);
+								throw new RuntimeException("Column " + namedPositions.getValue() + " not found in " + targetTable);
 							}
 						} catch (SQLObjectException e) {
 							throw new SQLObjectRuntimeException(e);
