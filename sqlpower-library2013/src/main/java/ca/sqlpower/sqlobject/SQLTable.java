@@ -44,6 +44,8 @@ import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sql.CachedRowSet;
 import ca.sqlpower.sqlobject.SQLIndex.Column;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
+import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
+import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.SessionNotFoundException;
 
@@ -1860,27 +1862,8 @@ public class SQLTable extends SQLObject {
      */
     static List<SQLTable> fetchTablesForTableContainer(DatabaseMetaData dbmd, String catalogName, String schemaName)
     throws SQLObjectException, SQLException {
-        ResultSet rs = null;
-        try {
-            rs = dbmd.getTables(catalogName,
-                    schemaName,
-                    "%",
-                    new String[] {"TABLE", "VIEW"});
-
-            List<SQLTable> tables = new ArrayList<SQLTable>();
-            while (rs.next()) {
-                tables.add(new SQLTable(null,
-                        rs.getString(3),
-                        rs.getString(5),
-                        rs.getString(4),
-                        false));
-            }
-            
-            return tables;
-            
-        } finally {
-            if (rs != null) rs.close();
-        }
+        DatabaseMeta dm = DatabaseMetaFactory.creator(dbmd.getDatabaseProductName());
+        return dm.fetchTablesWithRemark(dbmd, catalogName, schemaName);
     }
 
     /**
