@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ddl.DDLStatement.StatementType;
 import ca.sqlpower.diff.DiffChunk;
+import ca.sqlpower.diff.PropertyChange;
 import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLEnumeration;
 import ca.sqlpower.sqlobject.SQLIndex;
@@ -443,7 +444,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
     @Override
     public void dropPrimaryKey(SQLTable t) {
-        print("\nALTER TABLE " + toQualifiedName(t.getName()) + " DROP PRIMARY KEY");
+        print("\nALTER TABLE " + toQualifiedName(t.getPhysicalName()) + " DROP PRIMARY KEY");
         endStatement(StatementType.DROP, t);
     }
     
@@ -453,7 +454,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
         print(toQualifiedName(r.getFkTable()));
         print(" DROP FOREIGN KEY ");
-        print(r.getName());
+        print(r.getPhysicalName());
         endStatement(StatementType.DROP, r);
     }
     
@@ -476,6 +477,13 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
         }
 
         def.append(columnNullability(c));
+        
+        String comment = ( c.getRemarks() == null ? "" : c.getRemarks().trim() );
+        if ( needGenerateComment (c.getPhysicalName(), comment) ){
+            def.append(" COMMENT '");
+            def.append(comment.replaceAll("'", "''"));
+            def.append("'");
+        }
         
         logger.debug("column definition "+ def.toString());
         return def.toString();
@@ -570,7 +578,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
             print("UNIQUE ");
         }
         print("INDEX ");
-        print(toIdentifier(index.getName()));
+        print(toIdentifier(index.getPhysicalName()));
         if(index.getType() != null) {            
             print(" USING " + index.getType());
         }
@@ -642,38 +650,100 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
         }
     }
 
+    
 	@Override
 	public void addComment(SQLTable t, boolean includeColumns) {
-	    if (t.getRemarks() != null && t.getRemarks().trim().length() > 0) {
-        	print("\nALTER TABLE ");
-        	print(toQualifiedName(t));
-        	print(" COMMENT '");     		
-        	print(t.getRemarks().replaceAll("'", "''"));
-        	print("'");
-        	endStatement(StatementType.ALTER, t);
-	    }
-        if (includeColumns) {
-            addColumnComments(t);
-        }
+		addCommentByCondition(t.getPhysicalName(), t.getRemarks(), includeColumns, false);
 	}
+	
+	/**
+	 * Generate the comment statement when the comment of tables or columns is changed.
+	 */
+	@Override
+	public void modifyComment(SQLObject o, PropertyChange change) {
+        if (o instanceof SQLTable) {
+            SQLTable t = ( SQLTable ) o;
+            print("\nALTER TABLE ");
+            print(toQualifiedName(t));
+            addCommentByCondition(t.getPhysicalName(), ( change == null ? null : change.getNewValue() ), false, true);
+            endStatement(StatementType.ALTER, t);
+        } else if (o instanceof SQLColumn) {
+            addComment((SQLColumn)o);
+        }
+    }
 	
 	@Override
 	public void addComment(SQLColumn c) {
-	    if (c.getRemarks() != null && c.getRemarks().trim().length() > 0) {
-	        print("\nALTER TABLE ");
-	        print(toQualifiedName(c.getParent()));
-	        print(" MODIFY COLUMN ");
-	        print(c.getPhysicalName());
-	        print(" ");
-	        print(c.getTypeName());
-	        print(" COMMENT '");
-            print(c.getRemarks().replaceAll("'", "''"));
-            print("'");
-            endStatement(StatementType.ALTER, c);
-	    }
+		String comment =  ( c.getRemarks() == null ? "" : c.getRemarks().trim() );
+		boolean generateComment = needGenerateComment (c.getPhysicalName(), comment);
+        print("\nALTER TABLE ");
+        print(toQualifiedName(c.getParent()));
+        print(" MODIFY COLUMN ");
+        print(c.getPhysicalName());
+        print(" ");
+        print(columnType(c));
+        UserDefinedSQLType type = c.getUserDefinedSQLType();
+        String defaultValue = type.getDefaultValue(getPlatformName());
+        if ( defaultValue != null && !defaultValue.equals("")) {
+            print(" DEFAULT ");
+            print(defaultValue);
+        }
+        print(columnNullability(c));
+        print(" COMMENT '");
+        if ( generateComment ){
+        	print(comment.replaceAll("'", "''"));
+        }
+        print("'");
+        endStatement(StatementType.ALTER, c);
 	}
 
-    @Override
+	public void addTable(SQLTable t) throws SQLException, SQLObjectException {
+	       Map<String, SQLObject> colNameMap = new HashMap<String, SQLObject>();  // for detecting duplicate column names
+	        // generate a new physical name if necessary
+	        createPhysicalName(topLevelNames,t); // also adds generated physical name to the map
+	        print("\nCREATE TABLE ");
+	        print( toQualifiedName(t) );
+	        println(" (");
+	        boolean firstCol = true;
+	        
+	        List<SQLColumn> columns = t.getColumns();
+	        
+	        for (SQLColumn c : columns) {
+	            if (!firstCol) println(",");
+	            print("                ");
+	            print(columnDefinition(c,colNameMap));
+	            firstCol = false;
+	        }
+
+	        SQLIndex pk = t.getPrimaryKeyIndex();
+	        if (pk.getChildCount() > 0) {
+	            print(",\n");
+	            print("                ");
+	            writePKConstraintClause(pk);
+	        }
+	        
+	        for (SQLColumn c : columns) {
+	            UserDefinedSQLType type = c.getUserDefinedSQLType();
+	            List<SQLCheckConstraint> checkConstraints;
+	            SQLTypeConstraint constraintType = type.getConstraintType(getPlatformName());
+	            if (constraintType == null) {
+	                constraintType = type.getDefaultPhysicalProperties().getConstraintType();
+	                checkConstraints = type.getDefaultPhysicalProperties().getCheckConstraints();
+	            } else {
+	                checkConstraints = type.getCheckConstraints(getPlatformName());
+	            }
+	            
+	            if (constraintType == SQLTypeConstraint.CHECK) {
+	                print(",\n");
+	                print(columnCheckConstraint(c, checkConstraints));
+	            }
+	        }
+	        print("\n)");
+	        addComment(t,false);
+	        endStatement(StatementType.CREATE, t);
+	}
+
+	@Override
     public void addColumn(SQLColumn c) {
         Map<String, SQLObject> colNameMap = new HashMap<String, SQLObject>();
         print("\nALTER TABLE ");
@@ -718,4 +788,30 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
     public boolean supportsRollback() {
         return false;
     }
+
+    /**
+	 * Generate COMMENT statement 
+	 * @param name
+	 * @param comment
+	 * @param includeColumns
+	 * @param withFormat "true" means to generate COMMENT statement 
+	 * 										even if the content of comment is null or is equal to table name.
+	 */
+	private void addCommentByCondition(String name, String comment, boolean includeColumns, boolean withFormat ){
+		boolean generateComment = needGenerateComment (name, comment);
+		if ( withFormat ){
+            print(" COMMENT = '");
+            if ( generateComment ){
+            	print(comment.trim().replaceAll("'", "''"));
+            }
+            print("'");
+		} else {
+            if ( generateComment ){
+                print(" COMMENT = '");
+            	print(comment.trim().replaceAll("'", "''"));
+                print("'");
+            }
+		}
+	}
+	
 }

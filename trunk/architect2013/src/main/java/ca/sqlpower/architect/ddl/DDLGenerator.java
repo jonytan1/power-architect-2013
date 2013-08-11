@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import ca.sqlpower.diff.DiffChunk;
+import ca.sqlpower.diff.PropertyChange;
 import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLIndex;
 import ca.sqlpower.sqlobject.SQLObject;
@@ -88,10 +89,14 @@ public interface DDLGenerator {
 
     /**
      * Updates the comment (remark) of the passed object (table, column, view, ...)
-     *
-     * @param o the object to add the comment for.
+     * @param o the object to add the comment for. 
+     * @param change 
+     *                 since the new value of remark of table is not defined in o,
+     * 	                we should know the "change", which is a PropertyChange object.
+     * @since 1.0.7 found: In IBM DB2, the property of column should be altered 
+     * 		one by one, not in one statement. TODO
      */
-    public void modifyComment(SQLObject o);
+    public void modifyComment(SQLObject o, PropertyChange change);
 
     /**
      * Appends the DDL statement to rename "oldCol" to "newCol.

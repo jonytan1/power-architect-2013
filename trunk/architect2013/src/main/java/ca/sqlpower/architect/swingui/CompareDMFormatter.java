@@ -281,7 +281,13 @@ public class CompareDMFormatter {
                     throw new IllegalStateException("DiffChunk is an unexpected type.");
                 }
             } else if (chunk.getType() == DiffType.MODIFIED) {
-                // do nothing because it has not been modified enough (see next case)
+            	// When the column just modifies remarks.
+                for (PropertyChange change : chunk.getPropertyChanges()) {
+                    if (change.getPropertyName().equals("remarks")) {
+                        gen.modifyComment(chunk.getData(), change);
+                        break;
+                    }
+                }
             } else if (chunk.getType() == DiffType.SQL_MODIFIED) {
                 if (chunk.getData() instanceof SQLColumn) {
                     SQLColumn c = (SQLColumn) chunk.getData();
@@ -289,7 +295,7 @@ public class CompareDMFormatter {
                 }
                 for (PropertyChange change : chunk.getPropertyChanges()) {
                     if (change.getPropertyName().equals("remarks")) {
-                        gen.modifyComment(chunk.getData());
+                        gen.modifyComment(chunk.getData(), change);
                         break;
                     }
                 }
