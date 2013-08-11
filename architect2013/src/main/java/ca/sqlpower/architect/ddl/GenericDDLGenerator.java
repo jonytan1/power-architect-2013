@@ -38,6 +38,7 @@ import ca.sqlpower.architect.DepthFirstSearch;
 import ca.sqlpower.architect.ddl.DDLStatement.StatementType;
 import ca.sqlpower.architect.profile.ProfileFunctionDescriptor;
 import ca.sqlpower.diff.DiffChunk;
+import ca.sqlpower.diff.PropertyChange;
 import ca.sqlpower.object.SPResolverRegistry;
 import ca.sqlpower.object.SPVariableHelper;
 import ca.sqlpower.object.SPVariableResolver;
@@ -571,7 +572,7 @@ public class GenericDDLGenerator implements DDLGenerator {
         // TODO: move remarks storage to SQLObject in order to support comments for all object types
     }
 
-    public void modifyComment(SQLObject o) {
+    public void modifyComment(SQLObject o, PropertyChange change) {
         if (o instanceof SQLTable) {
             addComment((SQLTable)o, false);
         } else if (o instanceof SQLColumn) {
@@ -680,7 +681,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 	}
 	
 	public void dropTable(SQLTable t) {
-        print(makeDropTableSQL(t.getName()));
+        print(makeDropTableSQL(t.getPhysicalName()));
         endStatement(StatementType.DROP, t);
     }
 
@@ -827,7 +828,7 @@ public class GenericDDLGenerator implements DDLGenerator {
                 sb.append(" ");
             }
             sb.append(String.format("CONSTRAINT %s CHECK (%s)", 
-                    constraint.getName(),
+                    constraint.getPhysicalName(),
                     helper.substitute(constraint.getConstraint())));
         }
         
@@ -1314,7 +1315,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 
 	public void dropPrimaryKey(SQLTable t) throws SQLObjectException {
 	    SQLIndex pk = t.getPrimaryKeyIndex();
-	    print("\nALTER TABLE " + toQualifiedName(t.getName())
+	    print("\nALTER TABLE " + toQualifiedName(t.getPhysicalName())
 	            + " DROP CONSTRAINT " + pk.getPhysicalName());
 		endStatement(StatementType.DROP, t);
 	}
@@ -1323,7 +1324,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 		Map<String, SQLObject> colNameMap = new HashMap<String, SQLObject>();
 		StringBuffer sqlStatement = new StringBuffer();
 		boolean first = true;
-		sqlStatement.append("\nALTER TABLE "+ toQualifiedName(t.getName())
+		sqlStatement.append("\nALTER TABLE "+ toQualifiedName(t.getPhysicalName())
 				+ " ADD PRIMARY KEY (");
 		for (SQLColumn c : t.getColumns()) {
 			if (c.isPrimaryKey()) {
@@ -1369,7 +1370,7 @@ public class GenericDDLGenerator implements DDLGenerator {
 		print("ALTER INDEX ");
 		print(toQualifiedName(oldIndex));
 		print(" RENAME TO ");
-		println(toQualifiedName(newIndex.getName()));
+		println(toQualifiedName(newIndex.getPhysicalName()));
 		endStatement(StatementType.ALTER, oldIndex);
 	}
 
@@ -1392,7 +1393,7 @@ public class GenericDDLGenerator implements DDLGenerator {
         }
 
         print("INDEX ");
-        print(toQualifiedName(index.getName()));
+        print(toQualifiedName(index.getPhysicalName()));
         print("\n ON ");
         print(toQualifiedName(index.getParent()));
         print("\n ( ");
@@ -1445,4 +1446,28 @@ public class GenericDDLGenerator implements DDLGenerator {
         return false;
     }
 
+    /**
+     * To determine whether to generate the statement about to add comment.
+     * @param name
+     * @param comment
+     * @return
+     */
+    protected boolean needGenerateComment( String physicalName, String comment ){
+    	if ( isNullComment(comment) ) return false;
+    	if ( physicalName != null && !physicalName.equals(comment)){
+    		return true;
+    	}
+    	return false;
+    }
+
+    /**
+     * To determine whether the comment is null, empty string, or "null" string.
+     * @param comment
+     * @return
+     */
+	protected boolean isNullComment( String comment ){
+        if ( comment == null || comment.trim().length() < 1 ) return true;
+        if ( "null".equalsIgnoreCase(comment.trim()) ) return true;
+        return false;
+    }
 }

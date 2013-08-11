@@ -30,6 +30,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ddl.DDLStatement.StatementType;
+import ca.sqlpower.diff.PropertyChange;
 import ca.sqlpower.object.SPResolverRegistry;
 import ca.sqlpower.object.SPVariableHelper;
 import ca.sqlpower.object.SPVariableResolver;
@@ -276,7 +277,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 	 */
     @Override
 	public String getStatementTerminator() {
-        return "";
+        return "\nGO\n";
 	}
 
     @Override
@@ -402,27 +403,35 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 		// they are not read in any of the public APIs anyway so they are more
 		// "write-only" comments.
 		// So we only write a SQL comment with the table's comment here
-
-		if (t.getRemarks() != null && t.getRemarks().trim().length() > 0) {
-			print("\n-- Comment for table [" + t.getPhysicalName() + "]: ");
-			print(t.getRemarks().replaceAll(REGEX_CRLF, "\n-- "));
-			endStatement(StatementType.COMMENT, t);
-
-			if (includeColumns) {
-				addColumnComments(t);
-			}
-		}
-	}
+		// Since 1.0.7, generate the statements about comment.
+        if ( needGenerateComment( t.getPhysicalName(), t.getRemarks())){
+            String comment = t.getRemarks().trim();
+            String schema = getTargetSchema();
+            if (schema != null && schema.length() > 0 ) {
+                print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
+                        comment.replaceAll("'", "''") + "','user','" + 
+                        schema + "','table','" + t.getName()+"'");
+                endStatement(StatementType.COMMENT, t);
+            }
+        }
+        if (includeColumns) {
+            addColumnComments(t);
+        }
+    }
 
 	@Override
     public void addComment(SQLColumn c) {
-        if (c.getRemarks() == null || c.getRemarks().trim().length() == 0) return;
-
-        print("\n-- Comment for column [");
-        print(c.getName());
-        print("]: ");
-        print(c.getRemarks().replaceAll(REGEX_CRLF, "\n-- "));
-        endStatement(StatementType.COMMENT, c);
+        if ( needGenerateComment( c.getPhysicalName(), c.getRemarks())){
+            String schema = getTargetSchema();
+            String tableName = c.getParent().getName();
+            String comment = c.getRemarks().trim();
+            if (schema != null && schema.length() > 0 ) {
+                print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
+                        comment.replaceAll("'", "''") + "','user','" + 
+                        schema + "','table','" + tableName+"','column','" + c.getPhysicalName() + "'");
+                endStatement(StatementType.COMMENT, c);
+            }
+        }
     }
 
     @Override
@@ -723,6 +732,76 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
         SPResolverRegistry.deregister(c, resolver);
         
         return sb.toString();
+    }
+
+	/**
+	 * Generate the comment statement when the comment of tables or columns is changed.
+	 */
+	@Override
+	public void modifyComment(SQLObject o, PropertyChange change) {
+        if (o instanceof SQLTable) {
+            SQLTable t = ( SQLTable ) o;
+            
+            int type = getCommentModifyType( t.getPhysicalName(), change );
+            if ( type == 0 ) return;
+            String schemaName = t.getSchemaName();
+            if ( schemaName.length() < 1 ){
+            	schemaName = getTargetSchema();
+            }
+            generateCommentStatement( type, change.getNewValue(), schemaName, t.getPhysicalName(), null );
+            endStatement(StatementType.COMMENT, t);
+        } else if (o instanceof SQLColumn) {
+        	SQLColumn c = ( SQLColumn ) o;
+            
+            int type = getCommentModifyType( c.getPhysicalName(), change );
+            if ( type == 0 ) return;
+            if ( !( c.getParent() instanceof SQLTable) ) return;
+            SQLTable t =( SQLTable )c.getParent();
+            String schemaName = t.getSchemaName();
+            if ( schemaName.length() < 1 ){
+            	schemaName = getTargetSchema();
+            }
+            generateCommentStatement( type, change.getNewValue(), schemaName, t.getPhysicalName(), c.getPhysicalName() );
+            endStatement(StatementType.COMMENT, c);
+        }
+    }
+	
+	private int getCommentModifyType(String name, PropertyChange change ){
+        if ( change == null ) return 0;  //0: no operation.
+        boolean needOldComment = needGenerateComment( name, change.getOldValue());
+        boolean needNewComment = needGenerateComment( name, change.getNewValue());
+        if ( needNewComment ){
+            return ( needOldComment ? 2 : 1 );   //1: add; 2: update;  
+        }
+        return ( needOldComment ? 3 : 0 );   //3: drop; 0: no operation;
+    }
+
+    private void generateCommentStatement( int type, String comment, String schema, String tableName, String columnName ){
+        switch (type) {
+        case 1 :          //add
+            print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
+                    comment.trim().replaceAll("'", "''") + "','user','" + 
+                    schema + "','table','" + tableName+"'");
+            if ( columnName != null && columnName.trim().length() > 1 ){
+            	print(",'column','" + columnName.trim() + "'");
+            }
+        	break;
+        case 2 :        //update
+            print("\nEXECUTE SP_UPDATEEXTENDEDPROPERTY 'MS_Description','" +
+                    comment.trim().replaceAll("'", "''") + "','user','" + 
+                    schema + "','table','" + tableName+"'");
+            if ( columnName != null && columnName.trim().length() > 1 ){
+            	print(",'column','" + columnName.trim() + "'");
+            }
+        	break;
+        case 3 :        //drop
+            print("\nEXECUTE SP_DROPEXTENDEDPROPERTY 'MS_Description','user','" +
+                    schema + "','table','" + tableName+"'");
+            if ( columnName != null && columnName.trim().length() > 1 ){
+            	print(",'column','" + columnName.trim() + "'");
+            }
+        	break;
+        }
     }
 
 }
