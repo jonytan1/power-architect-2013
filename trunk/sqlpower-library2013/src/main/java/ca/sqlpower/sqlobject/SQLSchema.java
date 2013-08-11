@@ -109,7 +109,7 @@ public class SQLSchema extends SQLObject {
                 logger.warn("Couldn't close result set. Squishing this exception:", e);
             }
             try {
-                if (oldCatalog != null) {
+                if (oldCatalog != null && oldCatalog.trim().length() > 0 ) {
                     dbmd.getConnection().setCatalog(oldCatalog);
                 }
             } catch (SQLException e) {
