@@ -18,6 +18,7 @@
 	<property name="tests-resources" value="src/test/resources"/>
 	<property name="reports.dir" value="${dist.dir}/reports"/>
 	<property name="ca.sqlpower.SKIP_DODGY_TESTS" value="false"/>
+	<property name="encoding"      value="UTF-8"/>
 	<!--
 		Set the format of the findbugs report to xml by default
 	-->
@@ -59,7 +60,9 @@
 	</path>
 	
 	<target name="init">
-		<tstamp/>
+		<tstamp >
+			<format property="app.version" pattern="yyyyMMddHHmmss"/>
+		</tstamp>
 		<mkdir dir="${build}"/>
 		<mkdir dir="${build_tmp}"/>
 		<mkdir dir="${build.tests}"/>
@@ -69,7 +72,7 @@
 	
 	<target name="compile" depends="init">
 		
-		<javac srcdir="${src}" destdir="${build}" classpathref="compile.classpath" debug="true"/>
+		<javac srcdir="${src}" destdir="${build}" encoding="${encoding}" classpathref="compile.classpath" debug="true"/>
 		
 		<copy flatten="false" todir="${build}">
 			<fileset dir="${resources}">
@@ -86,12 +89,14 @@
 				srcdir="${src}" 
 				destdir="${build}" 
 				classpathref="compile.classpath" 
+			  	encoding="${encoding}" 
 				debug="true"/>
 		
 		<javac 
 				srcdir="${src.apt}" 
 				destdir="${build.apt}" 
 				classpathref="apt.classpath" 
+				encoding="${encoding}" 
 				debug="true"/>
 		
 		<apt srcdir="${src}"
@@ -99,6 +104,7 @@
 			classpathref="apt.classpath"
 			debug="true"
 			compile="true"
+            encoding="${encoding}" 
 			factory="ca.sqlpower.object.annotation.SPAnnotationProcessorFactory"
 			preprocessdir="${src}">
 		</apt>
@@ -120,7 +126,7 @@
 	
 	<target name="compile-tests" depends="compile-with-annotations">
 		
-		<javac srcdir="${tests}" destdir="${build.tests}" classpathref="test.classpath" debug="true"/>
+		<javac srcdir="${tests}" encoding="${encoding}" destdir="${build.tests}" classpathref="test.classpath" debug="true"/>
 		
 		<copy flatten="false" todir="${build.tests}">
 			<fileset dir="${tests-resources}">
@@ -203,7 +209,8 @@
 		<mkdir dir="${dist.dir}/doc/api"/>
 		<javadoc sourcepath="${src}" destdir="${dist.dir}/doc/api"
 			packagenames="ca.sqlpower.*"
-			maxmemory="100m"
+			maxmemory="100m" 
+			encoding="${encoding}"
 			windowtitle="ca.sqlpower.* SQL Power Library"
 			Version="true" Author="true" Use="true"
 			Overview="html/overview.html"
@@ -223,7 +230,8 @@
 		<mkdir dir="${dist.dir}/doc/api"/>
 		<javadoc sourcepath="${src}" destdir="${dist.dir}/doc/api"
 			packagenames="ca.sqlpower.*"
-			maxmemory="100m"
+			maxmemory="100m" 
+			encoding="${encoding}"
 			windowtitle="ca.sqlpower.* SQL Power Library"
 			Version="true" Author="true" Use="true"
 			Overview="html/overview.html"
@@ -302,7 +310,7 @@
 		<taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask"
 			classpath="${pmd.jar}"/>
 		<property name="cpd-results" value="${reports.dir}/pmd-cpd.xml"/>
-		<cpd encoding="UTF-8" minimumTokenCount="120" format="xml" outputfile="${cpd-results}">
+		<cpd encoding="${encoding}" minimumTokenCount="120" format="xml" outputfile="${cpd-results}">
 			<fileset dir="${src}">
 				<include name="ca/sqlpower/**/*.java"/>
 				<exclude name="generated/**.java"/>
@@ -311,4 +319,38 @@
 		<xslt in="${cpd-results}" style="${pmd.home}/etc/xslt/cpdhtml.xslt" out="${reports.dir}/pmd-cpd.html" />
 		<echo message="CPD completed, output is in ${reports.dir}/cpd-ant-results.html."/>
 	</target>
+    <target name="source_tgz" depends="init"
+        description="Builds a source tarball of the SQLPower Library">
+        <tar destfile="${dist.dir}/SQL-Power-SQLPower-Library-src-${app.version}.tar.gz"
+             compression="gzip" longfile="gnu">
+            <tarfileset dir="."
+                prefix="sqlpower-library-src-${app.version}"
+                excludes="build/**,**/*.bak,**/*~,**/TEST*,architect.log*,**/.fbwarnings,deploy/**,.fbprefs,staging/**,antbuild/**,dist/**,findbugs-ant-results.txt,pmd-ant-results.txt,cpd-ant-results.txt,build.log"/>
+        </tar>
+    </target>
+    <!-- Creates a tarball containing only the Java source files -->
+    <target name="source_only_tgz" depends="init"
+        description="Builds a source only tarball of the SQLPower Library">
+        <tar destfile="${dist.dir}/SQL-Power-SQLPower-Library-src-only-${app.version}.tar.gz"
+             compression="gzip" longfile="gnu">
+            <tarfileset dir="."
+                prefix="sqlpower-library-src-only-${app.version}"
+                includes="${src}/**/*.java,
+                      ${resources}/**/*.png,
+                      ${resources}/**/*.gif,
+                      ${resources}/**/*.wav,
+                      ${resources}/**/*.script,
+                      ${resources}/**/*.ini,
+                      ${resources}/**/*.xml,
+                      ${resources}/**/*.properties,
+                      ${tests}/**/*.java,
+                      ${tests-resources}/log4j.properties.example,
+                      build.xml,
+                      LICENSE,
+                      pl.regression.ini,
+                      .classpath,
+                      .project
+                      "/>
+        </tar>
+    </target>   
 </project>
