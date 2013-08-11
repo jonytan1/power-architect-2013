@@ -65,76 +65,75 @@ import ca.sqlpower.util.TransactionEvent;
  */
 public class DBTreeModel implements TreeModel, java.io.Serializable {
 
-	private static Logger logger = Logger.getLogger(DBTreeModel.class);
+    private static Logger logger = Logger.getLogger(DBTreeModel.class);
 
-	
-	
-	private static class ArchitectFolder extends FolderNode {
-	    private final Class<? extends SQLObject> containingSQLObjectChildType;
-	    protected final Callable<Boolean> isPopulatedRunnable;
-	    
-	    public ArchitectFolder(SPObject parentTable, Class<? extends SQLObject> containingChildType,
-	            Callable<Boolean> isPopulatedRunnable) {
-	        super(parentTable, containingChildType);
-	        containingSQLObjectChildType = containingChildType;
-	        this.isPopulatedRunnable = isPopulatedRunnable;
-	    }
-	    
-	    public Throwable getChildrenInaccessibleReason(Class<? extends SQLObject> childType) {
+    
+    
+    private static class ArchitectFolder extends FolderNode {
+        private final Class<? extends SQLObject> containingSQLObjectChildType;
+        protected final Callable<Boolean> isPopulatedRunnable;
+        private final String folderName;
+        
+        public ArchitectFolder(SPObject parentTable, Class<? extends SQLObject> containingChildType,
+                Callable<Boolean> isPopulatedRunnable) {
+            super(parentTable, containingChildType);
+            containingSQLObjectChildType = containingChildType;
+            this.isPopulatedRunnable = isPopulatedRunnable;
+            String key = null;
+            if (containingChildType.isAssignableFrom(SQLColumn.class)) {
+                key = "DBTreeCellRenderer.Columns";
+            } else if (containingChildType.isAssignableFrom(SQLIndex.class)) {
+                key = "DBTreeCellRenderer.Indices";
+            }else if (containingChildType.isAssignableFrom(SQLRelationship.class)) {
+                key = "DBTreeCellRenderer.ExportedKeys";
+            }else if (containingChildType.isAssignableFrom(SQLRelationship.SQLImportedKey.class)) {
+                key = "DBTreeCellRenderer.ImportedKeys";
+            }
+            
+            folderName = ( key == null ? 
+                    Messages.getString("DBTreeCellRenderer.ChildType", containingChildType.getSimpleName(), "{0}" )
+                    : Messages.getString(key, "{0}" ));
+        }
+        
+        public Throwable getChildrenInaccessibleReason(Class<? extends SQLObject> childType) {
             if (childType == containingChildType || childType == SQLObject.class) {
                 return ((SQLTable)parentTable).getChildrenInaccessibleReason(containingSQLObjectChildType);
             } else {
                 return null;
             }
-	    }
-	    
-	    @Override
-	    public String getShortDisplayName() {
-	        
-	        if (containingChildType.isAssignableFrom(SQLColumn.class)) {
-	            return "Columns folder for " + parentTable.getName();
-	        }
-	        
-	        if (containingChildType.isAssignableFrom(SQLIndex.class)) {
-	            return "Indices folder for " + parentTable.getName();
-	        }
-	        
-	        if (containingChildType.isAssignableFrom(SQLRelationship.class)) {
-	            return "Exported keys folder for " + parentTable.getName();
-	        }
-	        
-	        if (containingChildType.isAssignableFrom(SQLRelationship.SQLImportedKey.class)) {
-	            return "Imported keys folder for " + parentTable.getName();
-	        }
-	        
-	        return containingChildType.getSimpleName() + "s folder for " + parentTable.getName();
-	    }
+        }
+        
+        @Override
+        public String getShortDisplayName() {
+            
+            return folderName.replace("{0}", parentTable.getName());
+        }
 
-	    public boolean isPopulated() {
-	        try {
-	            return isPopulatedRunnable.call().booleanValue();
-	        } catch (Exception e) {
-	            throw new RuntimeException(e);
-	        }
-	    } 
+        public boolean isPopulated() {
+            try {
+                return isPopulatedRunnable.call().booleanValue();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } 
 
-	    @NonProperty
-	    public List<? extends SPObject> getChildrenWithoutPopulating() {
-	        if (parentTable instanceof SQLTable) {
-	            return ((SQLTable) parentTable).getChildrenWithoutPopulating(containingChildType);
-	        } else {
-	            return getChildren();
-	        }
-	    }
-	}
-	
-	/**
-	 * A {@link SPListener} implementation that will fire tree events as the underlying
-	 * objects change.
-	 */
-	private class DBTreeSPListener implements SPListener {
-	    
-	    public void childAdded(SPChildEvent e) {
+        @NonProperty
+        public List<? extends SPObject> getChildrenWithoutPopulating() {
+            if (parentTable instanceof SQLTable) {
+                return ((SQLTable) parentTable).getChildrenWithoutPopulating(containingChildType);
+            } else {
+                return getChildren();
+            }
+        }
+    }
+    
+    /**
+     * A {@link SPListener} implementation that will fire tree events as the underlying
+     * objects change.
+     */
+    private class DBTreeSPListener implements SPListener {
+        
+        public void childAdded(SPChildEvent e) {
             if (!isSPObjectRelevant(e.getSource())) return;
             if (!isSPObjectRelevant(e.getChild())) return;
             
@@ -254,7 +253,7 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
          */
         private void processSQLObjectChanged(PropertyChangeEvent e) {
             if (e.getSource() != null && 
-            		e.getNewValue() != null &&
+                    e.getNewValue() != null &&
                     e.getPropertyName().equals("name") &&  //$NON-NLS-1$
                     !e.getNewValue().equals(((SPObject) e.getSource()).getName()) ) {
                 logger.error("Name change event has wrong new value. new="+e.getNewValue()+"; real="+((SPObject) e.getSource()).getName()); //$NON-NLS-1$ //$NON-NLS-2$
@@ -315,10 +314,10 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
                 return true;
             }
         }
-	    
-	}
-	
-	private final DBTreeSPListener treeListener = new DBTreeSPListener();
+        
+    }
+    
+    private final DBTreeSPListener treeListener = new DBTreeSPListener();
 
     /**
      * When this flag is true, the DBTreeModel's protection against firing
@@ -330,15 +329,15 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
      */
     private boolean refireOnAnyThread = false;
     
-	protected SQLObject root;
-	
-	/**
-	 * Each table in the tree model is entered in the map when it is added to the tree
-	 * and is mapped to folders that contains the children of the table broken into their
-	 * types.
-	 */
-	protected final Map<SQLTable, List<ArchitectFolder>> foldersInTables = 
-	    new HashMap<SQLTable, List<ArchitectFolder>>();
+    protected SQLObject root;
+    
+    /**
+     * Each table in the tree model is entered in the map when it is added to the tree
+     * and is mapped to folders that contains the children of the table broken into their
+     * types.
+     */
+    protected final Map<SQLTable, List<ArchitectFolder>> foldersInTables = 
+        new HashMap<SQLTable, List<ArchitectFolder>>();
 
     /**
      * A listener that should be added to any JTree, that is not a DBTree, using
@@ -401,10 +400,10 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
      *            tree. This does not necessarily have to be the root object
      *            associated with the given session, but it normally will be.
      */
-	public DBTreeModel(SQLObjectRoot root, JTree tree) {
-		this(root, tree, true, true, true, true, true);
-	}
-	
+    public DBTreeModel(SQLObjectRoot root, JTree tree) {
+        this(root, tree, true, true, true, true, true);
+    }
+    
     /**
      * Creates a new tree model with all the SQLDatabase objects with exclusion
      * of specified {@link SQLObject}s.
@@ -419,9 +418,9 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
      *            that we want to display in the tree. If this is null no
      *            snapshots will be displayed.
      */
-	public DBTreeModel(SQLObjectRoot root, JTree tree, SPObject snapshotContainer) {
-	    this(root, tree, snapshotContainer, true, true, true, true, true);
-	}
+    public DBTreeModel(SQLObjectRoot root, JTree tree, SPObject snapshotContainer) {
+        this(root, tree, snapshotContainer, true, true, true, true, true);
+    }
 
     /**
      * Creates a new tree model with all the SQLDatabase objects with exclusion
@@ -443,9 +442,9 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
      * @param showIndices
      *            true if the {@link SQLIndex} folder should be shown.
      */
-	public DBTreeModel(SQLObjectRoot root, JTree tree, boolean showPlayPenDatabase, boolean showColumns, boolean showRelationships, boolean showImportedKeys, boolean showIndices) {
-	    this(root, tree, null, showPlayPenDatabase, showColumns, showRelationships, showImportedKeys, showIndices);
-	}
+    public DBTreeModel(SQLObjectRoot root, JTree tree, boolean showPlayPenDatabase, boolean showColumns, boolean showRelationships, boolean showImportedKeys, boolean showIndices) {
+        this(root, tree, null, showPlayPenDatabase, showColumns, showRelationships, showImportedKeys, showIndices);
+    }
 
     /**
      * Creates a new tree model with all the SQLDatabase objects with exclusion
@@ -471,111 +470,111 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
      * @param showIndices
      *            true if the {@link SQLIndex} folder should be shown.
      */
-	public DBTreeModel(SQLObjectRoot root, JTree tree, SPObject snapshotContainer, 
-	        boolean showPlayPenDatabase, boolean showColumns, boolean showRelationships, 
-	        boolean showImportedKeys, boolean showIndices) {
-	    this.root = root;
+    public DBTreeModel(SQLObjectRoot root, JTree tree, SPObject snapshotContainer, 
+            boolean showPlayPenDatabase, boolean showColumns, boolean showRelationships, 
+            boolean showImportedKeys, boolean showIndices) {
+        this.root = root;
         this.snapshotContainer = snapshotContainer;
-	    this.showPlayPenDatabase = showPlayPenDatabase;
-	    this.showColumns = showColumns;
-	    this.showRelationships = showRelationships;
-	    this.showImportedKeys = showImportedKeys;
-	    this.showIndices = showIndices;
-	    this.treeModelListeners = new LinkedList<TreeModelListener>();
-	    tree.addTreeWillExpandListener(treeWillExpandListener);
-	    SQLPowerUtils.listenToHierarchy(root, treeListener); 
+        this.showPlayPenDatabase = showPlayPenDatabase;
+        this.showColumns = showColumns;
+        this.showRelationships = showRelationships;
+        this.showImportedKeys = showImportedKeys;
+        this.showIndices = showIndices;
+        this.treeModelListeners = new LinkedList<TreeModelListener>();
+        tree.addTreeWillExpandListener(treeWillExpandListener);
+        SQLPowerUtils.listenToHierarchy(root, treeListener); 
 
-	    for (SPObject ancestor : SQLPowerUtils.getAncestorList(root)) {
-	        if (ancestor == snapshotContainer) continue;
-	        ancestor.addSPListener(treeListener);
-	    }
-	    
-	    if (snapshotContainer != null) {
-	        snapshotContainer.addSPListener(treeListener);
-	        for (SPObjectSnapshot<?> snapshot : snapshotContainer.getChildren(SPObjectSnapshot.class)) {
-	            SQLPowerUtils.listenToHierarchy(snapshot, treeListener);
-	        }
-	    }
+        for (SPObject ancestor : SQLPowerUtils.getAncestorList(root)) {
+            if (ancestor == snapshotContainer) continue;
+            ancestor.addSPListener(treeListener);
+        }
+        
+        if (snapshotContainer != null) {
+            snapshotContainer.addSPListener(treeListener);
+            for (SPObjectSnapshot<?> snapshot : snapshotContainer.getChildren(SPObjectSnapshot.class)) {
+                SQLPowerUtils.listenToHierarchy(snapshot, treeListener);
+            }
+        }
 
-	    setupTreeForNode(root);
-	}
-	
-	/**
-	 * Recursively walks the tree doing any necessary setup for each node.
-	 * At current this just adds folders for {@link SQLTable} objects.
-	 */
-	private void setupTreeForNode(SPObject node) {
-	    if (node instanceof SQLTable) {
-	        createFolders((SQLTable) node);
-	    }
-	    if (node instanceof SQLObject) {
-	        for (SQLObject child : ((SQLObject) node).getChildrenWithoutPopulating()) {
-	            setupTreeForNode(child);
-	        }
-	    } else {
-	        for (SPObject child : node.getChildren()) {
-	            setupTreeForNode(child);
-	        }
-	    }
-	}
+        setupTreeForNode(root);
+    }
+    
+    /**
+     * Recursively walks the tree doing any necessary setup for each node.
+     * At current this just adds folders for {@link SQLTable} objects.
+     */
+    private void setupTreeForNode(SPObject node) {
+        if (node instanceof SQLTable) {
+            createFolders((SQLTable) node);
+        }
+        if (node instanceof SQLObject) {
+            for (SQLObject child : ((SQLObject) node).getChildrenWithoutPopulating()) {
+                setupTreeForNode(child);
+            }
+        } else {
+            for (SPObject child : node.getChildren()) {
+                setupTreeForNode(child);
+            }
+        }
+    }
 
-	public Object getRoot() {
-		if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getRoot: returning "+root); //$NON-NLS-1$
-		return root;
-	}
+    public Object getRoot() {
+        if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getRoot: returning "+root); //$NON-NLS-1$
+        return root;
+    }
 
-	public Object getChild(Object parent, int index) {
-		if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getChild("+parent+","+index+")"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-		
-		if (parent instanceof ArchitectFolder) {
-		    return ((ArchitectFolder) parent).getChildren().get(index);
-		} else if (parent instanceof SQLTable) {
-		    return foldersInTables.get((SQLTable) parent).get(index);
-		}
-		
-		// If the playpen database is hidden, adjust the index accordingly.
-		// The index passed into this method is in terms of a non-PP-database
-		// tree.
-		if (!showPlayPenDatabase && parent instanceof SQLObjectRoot) {
-		    SQLObjectRoot root = (SQLObjectRoot) parent;
-		    List<? extends SQLObject> children = root.getChildren();
-		    int treeIndex = 0;
-		    for (int childIndex = 0; childIndex < children.size(); childIndex++) {
-		        SQLObject child = children.get(childIndex);
+    public Object getChild(Object parent, int index) {
+        if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getChild("+parent+","+index+")"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        
+        if (parent instanceof ArchitectFolder) {
+            return ((ArchitectFolder) parent).getChildren().get(index);
+        } else if (parent instanceof SQLTable) {
+            return foldersInTables.get((SQLTable) parent).get(index);
+        }
+        
+        // If the playpen database is hidden, adjust the index accordingly.
+        // The index passed into this method is in terms of a non-PP-database
+        // tree.
+        if (!showPlayPenDatabase && parent instanceof SQLObjectRoot) {
+            SQLObjectRoot root = (SQLObjectRoot) parent;
+            List<? extends SQLObject> children = root.getChildren();
+            int treeIndex = 0;
+            for (int childIndex = 0; childIndex < children.size(); childIndex++) {
+                SQLObject child = children.get(childIndex);
 
-		        if (!(child instanceof SQLDatabase && 
-		                ((SQLDatabase) child).isPlayPenDatabase())) {
-		            if (treeIndex == index) {
-		                return child;
-		            }
-		            treeIndex++;
-		        }
-		    }
-		    if (index == treeIndex && getSnapshotContainer() != null) {
-		        return getSnapshotContainer();
-		    }
-		} else if (parent instanceof SQLObjectRoot && 
-		        index == ((SQLObjectRoot) parent).getChildren().size()) {
-		    return getSnapshotContainer();
-		} else if (parent == getSnapshotContainer()) {
-		    SPObjectSnapshot<?> snapshot = getSnapshotContainer().getChildren(SPObjectSnapshot.class).get(index);
-		    return snapshot;
-		}
-		
-		SQLObject sqlParent = (SQLObject) parent;
-		try {
+                if (!(child instanceof SQLDatabase && 
+                        ((SQLDatabase) child).isPlayPenDatabase())) {
+                    if (treeIndex == index) {
+                        return child;
+                    }
+                    treeIndex++;
+                }
+            }
+            if (index == treeIndex && getSnapshotContainer() != null) {
+                return getSnapshotContainer();
+            }
+        } else if (parent instanceof SQLObjectRoot && 
+                index == ((SQLObjectRoot) parent).getChildren().size()) {
+            return getSnapshotContainer();
+        } else if (parent == getSnapshotContainer()) {
+            SPObjectSnapshot<?> snapshot = getSnapshotContainer().getChildren(SPObjectSnapshot.class).get(index);
+            return snapshot;
+        }
+        
+        SQLObject sqlParent = (SQLObject) parent;
+        try {
             if (logger.isDebugEnabled()) logger.debug("returning "+sqlParent.getChild(index)); //$NON-NLS-1$
-			return sqlParent.getChild(index);
-		} catch (Exception e) {
-		    throw new RuntimeException(e);
-		}
-	}
+            return sqlParent.getChild(index);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	public int getChildCount(Object parent) {
-		if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getChildCount("+parent+")"); //$NON-NLS-1$ //$NON-NLS-2$
-		
-		if (parent instanceof ArchitectFolder) {
-		    return ((ArchitectFolder) parent).getChildren().size();
+    public int getChildCount(Object parent) {
+        if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getChildCount("+parent+")"); //$NON-NLS-1$ //$NON-NLS-2$
+        
+        if (parent instanceof ArchitectFolder) {
+            return ((ArchitectFolder) parent).getChildren().size();
         } else if (parent instanceof SQLTable) {
             return foldersInTables.get((SQLTable) parent).size();
         } else if (parent instanceof SQLColumn) {
@@ -603,46 +602,46 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
             int size = ((SPObject) parent).getChildren(SPObjectSnapshot.class).size();
             return size;
         }
-		
-		SPObject sqlParent = (SPObject) parent;
-		try {
+        
+        SPObject sqlParent = (SPObject) parent;
+        try {
             if (logger.isDebugEnabled()) logger.debug("returning "+sqlParent.getChildren().size()); //$NON-NLS-1$
-			return sqlParent.getChildren().size();
-		} catch (Exception e) {
-		    throw new RuntimeException(e);
-		}
-	}
+            return sqlParent.getChildren().size();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	public boolean isLeaf(Object parent) {
-		if (logger.isDebugEnabled()) {
-		    if (parent instanceof AbstractSPObject) {
-		        logger.debug("DBTreeModel.isLeaf("+parent+"): returning "+!((AbstractSPObject) parent).allowsChildren()); //$NON-NLS-1$ //$NON-NLS-2$
-		    }
-		    else {
-		        logger.debug("DBTreeModel.isLeaf("+parent+"): returning "+!((SQLObject) parent).allowsChildren()); //$NON-NLS-1$ //$NON-NLS-2$
-		    }
-		}
-		if (parent instanceof ArchitectFolder) {
-		    return false;
-		} else if (parent instanceof SQLColumn) {
-		    return true;
-		}
-		return !((SPObject) parent).allowsChildren();
-	}
-	
-	public boolean isColumnsFolder(Object parent) {
-	    return parent instanceof ArchitectFolder && ((ArchitectFolder) parent).allowsChildType(SQLColumn.class);
-	}
+    public boolean isLeaf(Object parent) {
+        if (logger.isDebugEnabled()) {
+            if (parent instanceof AbstractSPObject) {
+                logger.debug("DBTreeModel.isLeaf("+parent+"): returning "+!((AbstractSPObject) parent).allowsChildren()); //$NON-NLS-1$ //$NON-NLS-2$
+            }
+            else {
+                logger.debug("DBTreeModel.isLeaf("+parent+"): returning "+!((SQLObject) parent).allowsChildren()); //$NON-NLS-1$ //$NON-NLS-2$
+            }
+        }
+        if (parent instanceof ArchitectFolder) {
+            return false;
+        } else if (parent instanceof SQLColumn) {
+            return true;
+        }
+        return !((SPObject) parent).allowsChildren();
+    }
+    
+    public boolean isColumnsFolder(Object parent) {
+        return parent instanceof ArchitectFolder && ((ArchitectFolder) parent).allowsChildType(SQLColumn.class);
+    }
 
-	public void valueForPathChanged(TreePath path, Object newValue) {
-		throw new UnsupportedOperationException("model doesn't support editing yet"); //$NON-NLS-1$
-	}
+    public void valueForPathChanged(TreePath path, Object newValue) {
+        throw new UnsupportedOperationException("model doesn't support editing yet"); //$NON-NLS-1$
+    }
 
-	public int getIndexOfChild(Object parent, Object child) {
-	    SPObject spChild = (SPObject) child;
-		if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getIndexOfChild("+parent+","+child+"): returning "+((SQLObject) parent).getChildren(spChild.getClass()).indexOf(child)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-		
-		if (parent instanceof ArchitectFolder) {
+    public int getIndexOfChild(Object parent, Object child) {
+        SPObject spChild = (SPObject) child;
+        if (logger.isDebugEnabled()) logger.debug("DBTreeModel.getIndexOfChild("+parent+","+child+"): returning "+((SQLObject) parent).getChildren(spChild.getClass()).indexOf(child)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        
+        if (parent instanceof ArchitectFolder) {
             if (((ArchitectFolder) parent).isPopulated() ||
                     spChild.getParent().equals(parent)) {
                 return ((ArchitectFolder) parent).getChildren(spChild.getClass()).indexOf(child);
@@ -653,10 +652,10 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
             if (foldersInTables.get((SQLTable) parent) == null) return -1;
             return foldersInTables.get((SQLTable) parent).indexOf(child);
         }
-		
-		int index = ((SPObject) parent).getChildren(spChild.getClass()).indexOf(child);
-		
-		if (!showPlayPenDatabase && parent instanceof SQLObjectRoot) {
+        
+        int index = ((SPObject) parent).getChildren(spChild.getClass()).indexOf(child);
+        
+        if (!showPlayPenDatabase && parent instanceof SQLObjectRoot) {
             if (child instanceof SQLDatabase && ((SQLDatabase) child).isPlayPenDatabase()) {
                 index = -1;
             } else {
@@ -677,142 +676,142 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
                 index++;
             }
         }
-		
+        
         return index;
-	}
+    }
 
-	// -------------- treeModel event source support -----------------
-	protected LinkedList<TreeModelListener> treeModelListeners;
+    // -------------- treeModel event source support -----------------
+    protected LinkedList<TreeModelListener> treeModelListeners;
 
-	public void addTreeModelListener(TreeModelListener l) {		
-		treeModelListeners.add(l);
-	}
+    public void addTreeModelListener(TreeModelListener l) {        
+        treeModelListeners.add(l);
+    }
 
-	public void removeTreeModelListener(TreeModelListener l) {
-		treeModelListeners.remove(l);
-	}
+    public void removeTreeModelListener(TreeModelListener l) {
+        treeModelListeners.remove(l);
+    }
 
-	protected void fireTreeNodesInserted(TreeModelEvent e) {
-		if (logger.isDebugEnabled()) logger.debug("Firing treeNodesInserted event: "+e); //$NON-NLS-1$
-		final TreeModelEvent ev =e; 
-		Runnable notifier = new Runnable(){
-			public void run() {
-				Iterator<TreeModelListener> it = treeModelListeners.iterator();
-				while (it.hasNext()) {
-					it.next().treeNodesInserted(ev);
-				}
-			}
-		};
-		// TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
-			notifier.run();
-		
-	}
-	
-	protected void fireTreeNodesRemoved(TreeModelEvent e) {
-		if (logger.isDebugEnabled()) logger.debug("Firing treeNodesRemoved event "+e); //$NON-NLS-1$
-		final TreeModelEvent ev =e; 
-		Runnable notifier = new Runnable(){
-			public void run() {
-				Iterator<TreeModelListener> it = treeModelListeners.iterator();
-				while (it.hasNext()) {
-					it.next().treeNodesRemoved(ev);
-				}
-			}
-		};
-//		 TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
-		notifier.run();
-		
-	}
+    protected void fireTreeNodesInserted(TreeModelEvent e) {
+        if (logger.isDebugEnabled()) logger.debug("Firing treeNodesInserted event: "+e); //$NON-NLS-1$
+        final TreeModelEvent ev =e; 
+        Runnable notifier = new Runnable(){
+            public void run() {
+                Iterator<TreeModelListener> it = treeModelListeners.iterator();
+                while (it.hasNext()) {
+                    it.next().treeNodesInserted(ev);
+                }
+            }
+        };
+        // TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
+            notifier.run();
+        
+    }
+    
+    protected void fireTreeNodesRemoved(TreeModelEvent e) {
+        if (logger.isDebugEnabled()) logger.debug("Firing treeNodesRemoved event "+e); //$NON-NLS-1$
+        final TreeModelEvent ev =e; 
+        Runnable notifier = new Runnable(){
+            public void run() {
+                Iterator<TreeModelListener> it = treeModelListeners.iterator();
+                while (it.hasNext()) {
+                    it.next().treeNodesRemoved(ev);
+                }
+            }
+        };
+//         TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
+        notifier.run();
+        
+    }
 
-	protected void fireTreeNodesChanged(TreeModelEvent e) {
-		final TreeModelEvent ev =e; 
-		Runnable notifier = new Runnable(){
-			public void run() {
-				Iterator<TreeModelListener> it = treeModelListeners.iterator();
-				while (it.hasNext()) {
-					it.next().treeNodesChanged(ev);
-				}
-			}
-		};
-//		 TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
-		notifier.run();
-		
-		
-	}
+    protected void fireTreeNodesChanged(TreeModelEvent e) {
+        final TreeModelEvent ev =e; 
+        Runnable notifier = new Runnable(){
+            public void run() {
+                Iterator<TreeModelListener> it = treeModelListeners.iterator();
+                while (it.hasNext()) {
+                    it.next().treeNodesChanged(ev);
+                }
+            }
+        };
+//         TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
+        notifier.run();
+        
+        
+    }
 
-	protected void fireTreeStructureChanged(TreeModelEvent e) {
-		logger.debug("firing TreeStructuredChanged. source="+e.getSource()); //$NON-NLS-1$
-		final TreeModelEvent ev =e; 		
-		Runnable notifier = new Runnable(){
-			public void run() {
-				Iterator<TreeModelListener> it = treeModelListeners.iterator();
-				while (it.hasNext()) {
-					it.next().treeStructureChanged(ev);
-				}
-			}
-		};
-//		 TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
-			notifier.run();
-		
-	}
-	
-	/**
-	 * This method will update the view of the tree by firing a structure change
-	 * on the root. This is necessary to update the tree after loading the project
-	 * on a separate thread.
-	 * 
-	 * NOTE: This method fires a TreeStructureChanged event which is not undoable
-	 * and can be a heavy operation!
-	 */
-	public void refreshTreeStructure() {
+    protected void fireTreeStructureChanged(TreeModelEvent e) {
+        logger.debug("firing TreeStructuredChanged. source="+e.getSource()); //$NON-NLS-1$
+        final TreeModelEvent ev =e;         
+        Runnable notifier = new Runnable(){
+            public void run() {
+                Iterator<TreeModelListener> it = treeModelListeners.iterator();
+                while (it.hasNext()) {
+                    it.next().treeStructureChanged(ev);
+                }
+            }
+        };
+//         TODO FIXME XXX Replace this with an alternate method leads to nasty behavior.  There are 3 others too
+            notifier.run();
+        
+    }
+    
+    /**
+     * This method will update the view of the tree by firing a structure change
+     * on the root. This is necessary to update the tree after loading the project
+     * on a separate thread.
+     * 
+     * NOTE: This method fires a TreeStructureChanged event which is not undoable
+     * and can be a heavy operation!
+     */
+    public void refreshTreeStructure() {
         fireTreeStructureChanged(new TreeModelEvent(root, new Object[]{root}));
-	}
+    }
 
-	/**
-	 * Returns the path from the conceptual, hidden root node (of type
-	 * DBTreeRoot) to the given node.
-	 * 
-	 * <p>NOTE: This method doesn't work for SQLRelationship objects,
-	 * because they have two parents! Use getPkPathToRelationship and
-	 * getFkPathToRelationship instead.
-	 *
-	 * @throws IllegalArgumentException if <code>node</code> is of class SQLRelationship.
-	 */
-	public SPObject[] getPathToNode(SPObject node) {
-		List<SPObject> path = new LinkedList<SPObject>();
-		while (node != null && node != root) {
-		    if (path.size() > 0 && node instanceof SQLTable) {
-		        for (ArchitectFolder folder : foldersInTables.get(node)) {
-		            if (folder.getContainingChildType().isAssignableFrom(path.get(0).getClass())) {
-		                path.add(0, folder);
-		                break;
-		            }
-		        }
-		    }
-			path.add(0, node);
-			if (node == getSnapshotContainer()) {
-			    break;
-			} else {
-			    node = node.getParent();
-			}
-		}
-		path.add(0, root);
-		return (SPObject[]) path.toArray(new SPObject[path.size()]);
-	}
+    /**
+     * Returns the path from the conceptual, hidden root node (of type
+     * DBTreeRoot) to the given node.
+     * 
+     * <p>NOTE: This method doesn't work for SQLRelationship objects,
+     * because they have two parents! Use getPkPathToRelationship and
+     * getFkPathToRelationship instead.
+     *
+     * @throws IllegalArgumentException if <code>node</code> is of class SQLRelationship.
+     */
+    public SPObject[] getPathToNode(SPObject node) {
+        List<SPObject> path = new LinkedList<SPObject>();
+        while (node != null && node != root) {
+            if (path.size() > 0 && node instanceof SQLTable) {
+                for (ArchitectFolder folder : foldersInTables.get(node)) {
+                    if (folder.getContainingChildType().isAssignableFrom(path.get(0).getClass())) {
+                        path.add(0, folder);
+                        break;
+                    }
+                }
+            }
+            path.add(0, node);
+            if (node == getSnapshotContainer()) {
+                break;
+            } else {
+                node = node.getParent();
+            }
+        }
+        path.add(0, root);
+        return (SPObject[]) path.toArray(new SPObject[path.size()]);
+    }
 
-	/**
+    /**
      * Returns the path from the conceptual, hidden root node (of type
      * DBTreeRoot) to the given node.
      * 
      * If the node is not a relationship then the list will only contain
      * one path to the object. Otherwise the list will contain the path
      * to the primary key then the path to the foreign key.
-	 */
-	public List<SPObject[]> getPathsToNode(SQLObject node) {
-	    List<SPObject[]> nodePaths = new ArrayList<SPObject[]>();
-	    nodePaths.add(getPathToNode(node));
-	    return nodePaths;
-	}
+     */
+    public List<SPObject[]> getPathsToNode(SQLObject node) {
+        List<SPObject[]> nodePaths = new ArrayList<SPObject[]>();
+        nodePaths.add(getPathToNode(node));
+        return nodePaths;
+    }
 
     /**
      * When this flag is true, the DBTreeModel's protection against firing
