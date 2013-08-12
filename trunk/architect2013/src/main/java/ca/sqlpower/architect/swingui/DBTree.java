@@ -60,6 +60,7 @@ import javax.swing.tree.TreePath;
 
 import org.apache.log4j.Logger;
 
+import ca.sqlpower.architect.ArchitectSessionBridge;
 import ca.sqlpower.architect.swingui.action.DataSourcePropertiesAction;
 import ca.sqlpower.architect.swingui.action.DatabaseConnectionManagerAction;
 import ca.sqlpower.architect.swingui.action.NewDataSourceAction;
@@ -91,7 +92,9 @@ import ca.sqlpower.swingui.JTreeExpandAllAction;
 import ca.sqlpower.swingui.MultiDragTreeUI;
 import ca.sqlpower.swingui.SPSUtils;
 import ca.sqlpower.swingui.SPSwingWorker;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRenderUtils;
 import ca.sqlpower.swingui.dbtree.SQLObjectSelection;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 
 public class DBTree extends JTree implements DragSourceListener {
 	private static Logger logger = Logger.getLogger(DBTree.class);
@@ -169,7 +172,13 @@ public class DBTree extends JTree implements DragSourceListener {
 		collapseAllAction = new JTreeCollapseAllAction(this, Messages.getString("DBTree.collapseAllActionName"));
 		expandAllAction = new JTreeExpandAllAction(this, Messages.getString("DBTree.expandAllActionName"));
 		addMouseListener(new PopupListener());
-        treeCellRenderer = new DBTreeCellRenderer();
+
+        ArchitectSessionBridge bridge = new ArchitectSessionBridge(){
+                public RenderType getRenderType(){
+                    return DBTreeNodeRenderUtils.getRenderType(session.isUsingLogicalNames());
+                }
+        };
+        treeCellRenderer = new DBTreeCellRenderer(bridge);
         getTreeCellRenderer().addIconFilter(new ProfiledTableIconFilter());
         setCellRenderer(getTreeCellRenderer());
         selectAllChildTablesAction = new SelectAllChildTablesAction();
@@ -199,6 +208,8 @@ public class DBTree extends JTree implements DragSourceListener {
                 cutSelection();
             }
         });
+
+        
 	}
 	
 	// ----------- INSTANCE METHODS ------------

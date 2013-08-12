@@ -57,6 +57,8 @@ import ca.sqlpower.sqlobject.SQLRelationship;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.swingui.FolderNode;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.TransactionEvent;
 
@@ -69,7 +71,7 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
 
     
     
-    private static class ArchitectFolder extends FolderNode {
+    private static class ArchitectFolder extends FolderNode implements DBTreeNodeRender{
         private final Class<? extends SQLObject> containingSQLObjectChildType;
         protected final Callable<Boolean> isPopulatedRunnable;
         private final String folderName;
@@ -124,6 +126,15 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
             } else {
                 return getChildren();
             }
+        }
+
+        @NonProperty @Override
+        public String getNodeTitle(RenderType type){
+        	if ( parentTable != null && parentTable instanceof SQLObject ){
+        		return folderName.replace("{0}",
+        				((SQLObject)parentTable).getTitleByRenderType(type));
+        	}
+        	return folderName.replace("{0}", (parentTable == null ? "null" : parentTable.getName()));
         }
     }
     
