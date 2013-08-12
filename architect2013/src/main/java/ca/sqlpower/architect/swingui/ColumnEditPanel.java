@@ -68,6 +68,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import org.apache.log4j.Logger;
 
+import ca.sqlpower.architect.ArchitectSessionBridge;
 import ca.sqlpower.architect.ddl.DDLUtils;
 import ca.sqlpower.architect.swingui.dbtree.DBTreeCellRenderer;
 import ca.sqlpower.architect.swingui.dbtree.DBTreeModel;
@@ -85,6 +86,8 @@ import ca.sqlpower.swingui.ChangeListeningDataEntryPanel;
 import ca.sqlpower.swingui.DataEntryPanelChangeUtil;
 import ca.sqlpower.swingui.PopupJTreeAction;
 import ca.sqlpower.swingui.SPSUtils;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRenderUtils;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.TransactionEvent;
 
@@ -319,10 +322,15 @@ public class ColumnEditPanel extends ChangeListeningDataEntryPanel implements Ac
             }
             
         };
+        ArchitectSessionBridge bridge = new ArchitectSessionBridge(){
+            public RenderType getRenderType(){
+                return DBTreeNodeRenderUtils.getRenderType(ColumnEditPanel.this.session.isUsingLogicalNames());
+            }
+        };
         colSourceTree.setModel(sourceTreeModel);
         colSourceTree.setRootVisible(false);
         colSourceTree.setShowsRootHandles(true);
-        colSourceTree.setCellRenderer(new DBTreeCellRenderer() {
+        colSourceTree.setCellRenderer(new DBTreeCellRenderer(bridge) {
             @Override
             public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
                     boolean leaf, int row, boolean hasFocus) {

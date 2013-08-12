@@ -42,6 +42,7 @@ import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.TreePath;
 
 import ca.sqlpower.architect.ArchitectProject;
+import ca.sqlpower.architect.ArchitectSessionBridge;
 import ca.sqlpower.architect.DepthFirstSearch;
 import ca.sqlpower.architect.ddl.DDLGenerator;
 import ca.sqlpower.architect.ddl.DDLStatement;
@@ -64,6 +65,8 @@ import ca.sqlpower.sqlobject.SQLObjectUtils;
 import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.swingui.SPSUtils;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRenderUtils;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 
 import com.jgoodies.forms.builder.PanelBuilder;
@@ -131,12 +134,17 @@ public class DataMoverPanel {
         
         okAction.setEnabled(false);
         
+        ArchitectSessionBridge bridge = new ArchitectSessionBridge(){
+            public RenderType getRenderType(){
+                return DBTreeNodeRenderUtils.getRenderType(DataMoverPanel.this.session.isUsingLogicalNames());
+            }
+        };
         sourceTree = new JTree();
         final DBTreeModel sourceTreeModel = new DBTreeModel(treeRoot, sourceTree);
         sourceTree.setModel(sourceTreeModel);
         sourceTree.setRootVisible(false);
         sourceTree.setShowsRootHandles(true);
-        sourceTree.setCellRenderer(new DBTreeCellRenderer());
+        sourceTree.setCellRenderer(new DBTreeCellRenderer(bridge));
         sourceTree.addTreeSelectionListener(dbTreeListener);
         
         destTree = new JTree();
@@ -144,7 +152,7 @@ public class DataMoverPanel {
         destTree.setModel(destTreeModel);
         destTree.setRootVisible(false);
         destTree.setShowsRootHandles(true);
-        destTree.setCellRenderer(new DBTreeCellRenderer());
+        destTree.setCellRenderer(new DBTreeCellRenderer(bridge));
         destTree.addTreeSelectionListener(dbTreeListener);
         
         PanelBuilder pb = new PanelBuilder(

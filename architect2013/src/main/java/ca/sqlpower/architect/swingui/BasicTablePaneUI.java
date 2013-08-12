@@ -42,6 +42,8 @@ import ca.sqlpower.architect.ddl.GenericDDLGenerator;
 import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRenderUtils;
 
 public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializable {
 	private static Logger logger = Logger.getLogger(BasicTablePaneUI.class);
@@ -294,11 +296,10 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
      */
 	private String columnText(SQLColumn col) {
         StringBuilder displayName = new StringBuilder(50);
-        if (tablePane.isUsingLogicalNames()) {
-            displayName.append(col.getName()).append(": ");
-        } else {
-            displayName.append(col.getPhysicalName()).append(": ");
-        }
+
+        displayName.append(
+        		col.getTitleByRenderType(DBTreeNodeRenderUtils.getRenderType(tablePane.isUsingLogicalNames())));
+        displayName.append(": ");
         displayName.append(col.getTypeName());
         displayName.append(getColumnTag(col));
         return displayName.toString();
@@ -468,10 +469,13 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
             fqn.append(db);
             if (cat != null) fqn.append('.').append(cat);
             if (sch != null) fqn.append('.').append(sch);
-            fqn.append('.').append(tp.isUsingLogicalNames()? tp.getModel().getName():tp.getModel().getPhysicalName());
+            fqn.append('.').append(
+                    tp.getModel().getTitleByRenderType(
+                            DBTreeNodeRenderUtils.getRenderType(tp.isUsingLogicalNames())));
             return fqn.toString();
         } else {
-            return tp.isUsingLogicalNames()? tp.getModel().getName():tp.getModel().getPhysicalName();
+            return tp.getModel().getTitleByRenderType(
+                    DBTreeNodeRenderUtils.getRenderType(tp.isUsingLogicalNames()));
         }
     }
 

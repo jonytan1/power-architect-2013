@@ -25,12 +25,14 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
+import javax.swing.tree.TreeModel;
 
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ProjectSettings;
 import ca.sqlpower.architect.ProjectSettings.ColumnVisibility;
 import ca.sqlpower.architect.profile.TableProfileCreator;
+import ca.sqlpower.architect.swingui.dbtree.DBTreeModel;
 import ca.sqlpower.swingui.DataEntryPanel;
 
 import com.jgoodies.forms.builder.DefaultFormBuilder;
@@ -290,6 +292,8 @@ public class ProjectSettingsPanel extends JPanel implements DataEntryPanel {
 	        settings.rollback("Exception thrown when applying project settings changes");
 	        throw new RuntimeException(e);
 	    }
+	    TreeModel tm = session.getDBTree().getModel();
+	    if (tm instanceof DBTreeModel) ((DBTreeModel)tm).refreshTreeStructure();
         return true;
 	}
 
