@@ -48,6 +48,7 @@ import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sql.CachedRowSet;
 import ca.sqlpower.sqlobject.SQLIndex.Column;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.SessionNotFoundException;
 
@@ -1583,7 +1584,13 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 	    	result = 31 * relationship.hashCode();
 			return result;
 		}
-	}
+		
+        @NonProperty @Override
+        public String getNodeTitle(RenderType type){
+            if ( relationship == null ) return this.getNodeTitle(type);
+            return relationship.getNodeTitle(type);
+        }
+    }
 	
 	// -------------------------- COLUMN MAPPING ------------------------
 
@@ -1858,6 +1865,26 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 			return fkColName;
 		}
 
+        //TODO
+        @NonProperty @Override
+        public String getNodeTitle(RenderType type){
+            if (pkColumn == null || fkColumn == null) return "Incomplete mapping";
+            StringBuffer title = new StringBuffer();
+            title.append(pkColumn.getTitleByRenderType(type));
+            title.append(" - ");
+            if (fkColumn != null && fkColumn.getParent() != null){
+                title.append(fkColumn.getParent().getTitleByRenderType(type));
+            } else if ( fkTable != null ){
+                title.append(fkTable.getTitleByRenderType(type));
+            }
+            title.append(".");
+            if (fkColumn != null){
+                title.append(fkColumn.getTitleByRenderType(type));
+            } else if ( fkColName != null ){
+                title.append(fkColName);
+            }
+            return title.toString();
+        }
 	}
 
 	/**

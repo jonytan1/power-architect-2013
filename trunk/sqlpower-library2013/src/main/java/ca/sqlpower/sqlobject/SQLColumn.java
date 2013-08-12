@@ -50,6 +50,7 @@ import ca.sqlpower.sqlobject.SQLTypePhysicalProperties.SQLTypeConstraint;
 import ca.sqlpower.sqlobject.SQLTypePhysicalPropertiesProvider.PropertyType;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.UserPrompter;
 import ca.sqlpower.util.UserPrompterFactory;
 
@@ -1533,4 +1534,8 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 		firePropertyChange("etlNotes", oldNotes, etlNotes);
 	}
 	
+    @NonProperty @Override
+    public String getNodeTitle(RenderType type){
+        return getTitleByRenderType(type) + ": " + getTypeName();
+    }
 }

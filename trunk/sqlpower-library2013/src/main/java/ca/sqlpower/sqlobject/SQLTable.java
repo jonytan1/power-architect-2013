@@ -46,6 +46,7 @@ import ca.sqlpower.sqlobject.SQLIndex.Column;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.SessionNotFoundException;
 
@@ -2171,4 +2172,10 @@ public class SQLTable extends SQLObject {
 	SQLIndex getPrimaryKeyIndexWithoutPopulating() {
 		return primaryKeyIndex;
 	}
+
+    @NonProperty @Override
+    public String getNodeTitle(RenderType type){
+    	if (this.objectType == null) return getTitleByRenderType(type);
+        return getTitleByRenderType(type) + " (" + this.objectType + ")";
+    }
 }
