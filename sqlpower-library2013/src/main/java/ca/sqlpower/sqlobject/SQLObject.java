@@ -42,6 +42,7 @@ import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sql.jdbcwrapper.DatabaseMetaDataDecorator;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRender;
 import ca.sqlpower.util.SQLPowerUtils;
 
 import com.google.common.collect.ListMultimap;
@@ -84,7 +85,7 @@ import com.google.common.collect.ListMultimap;
  * into namespaces to ensure multiple clients who don't know about each other do
  * not end up suffering naming collisions.
  */
-public abstract class SQLObject extends AbstractSPObject implements java.io.Serializable {
+public abstract class SQLObject extends AbstractSPObject implements java.io.Serializable, DBTreeNodeRender {
 
 	private static Logger logger = Logger.getLogger(SQLObject.class);
 	protected boolean populated = false;
@@ -832,5 +833,21 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
                 || (oldName != null && oldName.equals(getPhysicalName()))) {
             setPhysicalName(newName);
         }
+    }
+
+    @NonProperty
+    public String getNodeTitle(RenderType type){
+        return getTitleByRenderType(type);
+    }
+
+    /**
+     * Get the LogicalName or PhysicalName according to renderType.
+     * If type is null, the default is PhysicalName.
+     * @param type
+     * @return
+     */
+    @NonProperty
+    public String getTitleByRenderType(RenderType type){
+        return (RenderType.LogicalName.equals(type) ? getName() : getPhysicalName());
     }
 }
