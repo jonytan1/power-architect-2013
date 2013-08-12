@@ -31,6 +31,7 @@ import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.font.FontRenderContext;
 import java.beans.PropertyChangeEvent;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -521,12 +522,13 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
         }
         
         if (emptyTag) {
-            return ""; //$NON-NLS-1$
+            return ( col.getNullable() == DatabaseMetaData.columnNoNulls ) ? " [ M ]" : ""; //$NON-NLS-1$
         } else {
             tag.append("K"); //$NON-NLS-1$
             fullTag.append("  [ "); //$NON-NLS-1$
             fullTag.append(tag);
             fullTag.append(" ]"); //$NON-NLS-1$
+            if ( col.getNullable() == DatabaseMetaData.columnNoNulls ) fullTag.append(" [ M ]");
             return fullTag.toString();
         }
     }

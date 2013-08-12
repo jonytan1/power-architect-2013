@@ -24,6 +24,7 @@ import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -254,6 +255,7 @@ public class DBTreeCellRenderer extends DefaultTreeCellRenderer {
             fullTag.append(" ]"); //$NON-NLS-1$
             setText(getText() + fullTag.toString());
         }
+        if (col.getNullable() == DatabaseMetaData.columnNoNulls) setText(getText() + " [ M ]");
     }
 
     /**
