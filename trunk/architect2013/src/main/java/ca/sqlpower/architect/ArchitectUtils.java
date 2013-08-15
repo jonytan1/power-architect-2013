@@ -359,4 +359,41 @@ public class ArchitectUtils {
             }
         }
     }
+    
+    /**
+     * The nullable property of fkColumn and pkColumn in relationship may not be same.
+     * @param fkColumn
+     * @param pkColumn
+     * @return
+     */
+    public static boolean relationColumnsDiffer(SQLColumn fkColumn, SQLColumn pkColumn) {
+
+        // eliminate meaningless type differences
+        int targetType = compressType(fkColumn.getType());
+        int sourceType = compressType(pkColumn.getType());
+
+        int targetPrecision = fkColumn.getPrecision();
+        int sourcePrecision = pkColumn.getPrecision();
+        
+        int targetScale = fkColumn.getScale();
+        int sourceScale = pkColumn.getScale();
+
+		if (!needsScale(targetType)) {
+			targetScale = 0;
+		}
+		if (!needsPrecision(targetType)) {
+			targetPrecision = 0;
+		}
+
+		if (!needsScale(sourceType)) {
+			sourceScale = 0;
+		}
+		if (!needsPrecision(sourceType)) {
+			sourcePrecision = 0;
+		}
+
+        return (sourceType != targetType)
+            || (targetPrecision != sourcePrecision)
+            || (targetScale != sourceScale);
+    }
 }
