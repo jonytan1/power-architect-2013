@@ -35,6 +35,7 @@ import ca.sqlpower.architect.swingui.TableEditPanel;
 import ca.sqlpower.architect.swingui.TablePane;
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
 import ca.sqlpower.sqlobject.SQLObjectException;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.swingui.DataEntryPanel;
 
@@ -101,8 +102,17 @@ public class CreateTableAction extends AbstractArchitectAction {
                         try {       
                             session.getWorkspace().begin("Creating a SQLTable and TablePane");
                             if (super.applyChanges()) {
-                                tp.setName(tp.getModel().getName());
-                                session.getTargetDatabase().addChild(tp.getModel());
+                            	SQLTable t = tp.getModel();
+                            	SQLSchema newSchema = session.getTargetDatabase().getPlayPenSchema(t.getPlayPenSchemaName());
+                            	if (newSchema != t.getParent()){
+                            		if (t.getParent() != null) {
+                            			t.getParent().removeChild(t);
+                            		}
+                            		if (newSchema != null) {
+                            			newSchema.addChild(t);
+                            		}
+                            	}
+                                tp.setName(t.getName());
                                 playpen.selectNone();
                                 playpen.addTablePane(tp, p);
                                 tp.setSelected(true, SelectionEvent.SINGLE_SELECT);

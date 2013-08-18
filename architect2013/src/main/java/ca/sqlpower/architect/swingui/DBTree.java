@@ -55,6 +55,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
+import javax.swing.TransferHandler;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
@@ -161,7 +162,7 @@ public class DBTree extends JTree implements DragSourceListener {
 		if (!GraphicsEnvironment.isHeadless()) {
 		    //XXX See http://trillian.sqlpower.ca/bugzilla/show_bug.cgi?id=3036
 		    new DragSource().createDefaultDragGestureRecognizer
-		        (this, DnDConstants.ACTION_COPY, new DBTreeDragGestureListener());
+		        (this, DnDConstants.ACTION_COPY_OR_MOVE, new DBTreeDragGestureListener());
 		}
 
         setConnAsTargetDB = new SetConnAsTargetDB(null);
@@ -209,7 +210,7 @@ public class DBTree extends JTree implements DragSourceListener {
             }
         });
 
-        
+        this.setTransferHandler(new DBTreeTransferHandler());
 	}
 	
 	// ----------- INSTANCE METHODS ------------
@@ -415,7 +416,31 @@ public class DBTree extends JTree implements DragSourceListener {
         expandAllAction.setEnabled(p != null);
         collapseAllAction.setEnabled(p != null);
 
-		if (!isTargetDatabaseNode(p) && isTargetDatabaseChild(p)) {
+        if ( isTargetDatabaseNode(p) ) {
+        	newMenu.addSeparator();
+        	//create a schema menu item
+        	JMenuItem mi = new JMenuItem();
+        	mi.setAction(session.getArchitectFrame().getCreatePlayPenSchemaAction());
+        	mi.setActionCommand(ACTION_COMMAND_SRC_DBTREE);
+            newMenu.add(mi);
+        }
+        SQLSchema schema = getTargetSchemaUnderTargetDatabase(p);
+        if ( schema != null ) {
+        	newMenu.addSeparator();
+        	//edit a schema menu item
+        	JMenuItem mi = new JMenuItem();
+        	mi.setAction(session.getArchitectFrame().getEditPlayPenSchemaAction());
+        	mi.setActionCommand(ACTION_COMMAND_SRC_DBTREE);
+            newMenu.add(mi);
+            
+        	mi = new JMenuItem();
+        	mi.setAction(session.getArchitectFrame().getDeletePlayPenSchemaAction());
+        	mi.setActionCommand(ACTION_COMMAND_SRC_DBTREE);
+            newMenu.add(mi);
+            
+        }
+
+        if (!isTargetDatabaseNode(p) && isTargetDatabaseChild(p)) {
 		    JMenuItem mi;
 		    
 		    newMenu.addSeparator();
@@ -552,14 +577,18 @@ public class DBTree extends JTree implements DragSourceListener {
 			mi.setAction(af.getDeleteSelectedAction());
 			mi.setActionCommand(ACTION_COMMAND_SRC_DBTREE);
 			newMenu.add(mi);
-			if (p.getLastPathComponent() instanceof SQLTable ||
-			        p.getLastPathComponent() instanceof SQLColumn ||
-			        p.getLastPathComponent() instanceof SQLRelationship ||
-                    p.getLastPathComponent() instanceof SQLIndex) {
-			    mi.setEnabled(true);
-			} else {
-				mi.setEnabled(false);
+			TreePath [] selections = this.getSelectionPaths();
+			boolean deleteEnabled = ( selections.length > 0 );
+			for ( int i = 0; i < selections.length; i++){
+				Object obj = selections[i].getLastPathComponent();
+				if ( !(obj instanceof SQLTable ||
+						obj instanceof SQLColumn ||
+						obj instanceof SQLRelationship ||
+						obj instanceof SQLIndex) ) {
+					deleteEnabled = false;
+				}
 			}
+			mi.setEnabled( deleteEnabled );
 		} else if (p != null && p.getLastPathComponent() instanceof SPObjectSnapshot<?>) {
 		    final SPObjectSnapshot<?> snapshot = (SPObjectSnapshot<?>) p.getLastPathComponent();
 		    newMenu.addSeparator();
@@ -884,6 +913,15 @@ public class DBTree extends JTree implements DragSourceListener {
             compareDialog.compareCurrentWithOrig(schema,catalog, db);
         }
     }
+
+    public SQLSchema getTargetSchemaUnderTargetDatabase(TreePath tp) {
+        if (tp == null) return null;
+        Object obj = tp.getLastPathComponent();
+        if (isTargetDatabaseChild(tp) && obj instanceof SQLSchema) {
+            return (SQLSchema) obj;
+        }
+        return null;
+    }
 	
 	// --------------- INNER CLASSES -----------------
 	/**
@@ -908,7 +946,7 @@ public class DBTree extends JTree implements DragSourceListener {
   			    if (transferObject != null) {
   			        // TODO add undo event
   			        
-  			        dge.getSourceAsDragGestureRecognizer().setSourceActions(DnDConstants.ACTION_COPY);
+  			        dge.getSourceAsDragGestureRecognizer().setSourceActions(DnDConstants.ACTION_COPY_OR_MOVE);
   			        dge.getDragSource().startDrag
   			                (dge,
   			                null, //DragSource.DefaultCopyNoDrop,
@@ -1197,4 +1235,94 @@ public class DBTree extends JTree implements DragSourceListener {
         }
     }
 
+    private class DBTreeTransferHandler extends TransferHandler
+    {
+    	/**
+		 * 
+		 */
+		private static final long serialVersionUID = 6970349716552751092L;
+
+		@Override
+    	public boolean canImport(TransferHandler.TransferSupport support) {
+    		if (!(support.getDropLocation() instanceof JTree.DropLocation)) return false;
+    		Transferable t = support.getTransferable();
+    		if (!support.isDrop()) return false;
+    		
+    		TreePath targetPath = getTargetTreePath((JTree.DropLocation) support.getDropLocation());
+    		SQLSchema targetSchema = getTargetSchema(targetPath);
+    		if (targetSchema == null) return false;
+    		
+			int action = (MOVE & support.getSourceDropActions());
+			if (action == 0) return false;
+			support.setDropAction(action);
+
+    		if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
+    	        try {
+                    SQLObject[] paths = (SQLObject[]) t.getTransferData(
+                            SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR);
+                    for (SQLObject oo : paths) {
+                        if (oo instanceof SQLTable) {
+                        	SQLTable table = (SQLTable) oo;
+                        	if (table.getParent() == targetSchema) return false;
+                        	if (!table.getParentDatabase().isPlayPenDatabase()) 
+                        		return false;;
+                        } else {
+                            return false;
+                        }
+                    }
+    	        } catch (Throwable e) {
+    	            return false;
+    	        }
+    	        return true;
+    	    }
+  			return false;
+    	}
+    	
+    	private SQLSchema getTargetSchema(TreePath path){
+    		return getTargetSchemaUnderTargetDatabase(path);
+    	}
+
+    	private TreePath getTargetTreePath(JTree.DropLocation dropLocation){
+    		return dropLocation.getPath();
+    	}
+    	
+    	@Override
+    	public boolean importData(TransferHandler.TransferSupport support){
+    		if (!canImport(support)){
+    			return false;
+    		}
+    		TreePath targetPath = getTargetTreePath((JTree.DropLocation) support.getDropLocation());
+    		SQLSchema targetSchema = getTargetSchema(targetPath);
+    		if (targetSchema == null) return false;
+
+    		Transferable t = support.getTransferable();
+    	    if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
+    	        targetSchema.begin("Move table(s) to schema \"" + targetSchema.getName() + "\"" );
+    	        try {
+
+                    SQLObject[] paths = (SQLObject[]) t.getTransferData(
+                            SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR);
+                    for (SQLObject oo : paths) {
+                        if (oo instanceof SQLTable) {
+                        	SQLTable table = (SQLTable) oo;
+                        	if (!table.getParentDatabase().isPlayPenDatabase()) 
+                        		throw new SQLObjectException("The moved table (" + table.getName() + ") is not belong to PlayPenDatabase.");
+                        	table.moveToAnotherSchema(targetSchema);
+                        } else {
+                            logger.error("Unknown object moved in Schema: "+oo); //$NON-NLS-1$
+                            throw new SQLObjectException("The moved object (" + oo.getName() + ") is not table.");
+                        }
+                    }
+
+                    targetSchema.commit();
+                    return true;
+    	        } catch (Throwable e) {
+    	        	targetSchema.rollback("Error occurred: " + e.toString());
+    	            throw new RuntimeException(e);
+    	        }
+    	    }
+    		return false;
+    	}
+    }
+    
 }

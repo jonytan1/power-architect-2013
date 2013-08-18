@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ddl.GenericDDLGenerator;
 import ca.sqlpower.sqlobject.SQLColumn;
+import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
@@ -475,7 +476,15 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
                             DBTreeNodeRenderUtils.getRenderType(tp.isUsingLogicalNames())));
             return fqn.toString();
         } else {
-            return tp.getModel().getTitleByRenderType(
+        	SQLObject parent = tp.getModel().getParent();
+        	String parentName = (parent == null) ? null : parent.getName();
+        	if (parentName == null || parentName.trim().isEmpty()) {
+        		parentName = "";
+        	}
+        	else {
+        		parentName = parentName.trim() + ".";
+        	}
+            return parentName + tp.getModel().getTitleByRenderType(
                     DBTreeNodeRenderUtils.getRenderType(tp.isUsingLogicalNames()));
         }
     }

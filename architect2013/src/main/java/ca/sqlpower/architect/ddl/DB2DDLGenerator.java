@@ -155,7 +155,7 @@ public class DB2DDLGenerator extends GenericDDLGenerator {
 		print("RENAME INDEX ");
 		print(toQualifiedName(oldIndex));
 		print(" TO ");
-		println(toQualifiedName(newIndex.getName()));
+		println(toQualifiedName(newIndex));
 		endStatement(StatementType.ALTER, oldIndex);
 	}
 

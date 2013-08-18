@@ -67,9 +67,6 @@ public class DDLExportPanel implements DataEntryPanel {
 	private JLabel catalogLabel;
 	private JTextField catalogField;
 
-	private JLabel schemaLabel;
-	private JTextField schemaField;
-
 	private final DatabaseListChangeListener databaseListChangeListener = new DatabaseListChangeListener() {
 
         public void databaseRemoved(DatabaseListChangeEvent e) {
@@ -146,8 +143,6 @@ public class DDLExportPanel implements DataEntryPanel {
 
         panelProperties.add(catalogLabel = new JLabel(Messages.getString("DDLExportPanel.targetCatalog"))); //$NON-NLS-1$
         panelProperties.add(catalogField = new JTextField(ddlg.getTargetCatalog()));
-        panelProperties.add(schemaLabel = new JLabel(Messages.getString("DDLExportPanel.targetSchema"))); //$NON-NLS-1$
-        panelProperties.add(schemaField = new JTextField(ddlg.getTargetSchema()));
         mainPanel.add(panelProperties);
         mainPanel.add(newTargetDB);
 
@@ -211,16 +206,6 @@ public class DDLExportPanel implements DataEntryPanel {
 				catalogField.setEnabled(false);
 			}
 
-			if (newGen.getSchemaTerm() != null) {
-				schemaLabel.setText(newGen.getSchemaTerm());
-				schemaLabel.setEnabled(true);
-				schemaField.setEnabled(true);
-			} else {
-				schemaLabel.setText(Messages.getString("DDLExportPanel.noSchema")); //$NON-NLS-1$
-				schemaLabel.setEnabled(false);
-				schemaField.setText(null);
-				schemaField.setEnabled(false);
-			}
 		} catch (Exception ex) {
 			String message = Messages.getString("DDLExportPanel.couldNotCreateDdlGenerator"); //$NON-NLS-1$
 			if (selectedGeneratorClass != null) {
@@ -286,12 +271,6 @@ public class DDLExportPanel implements DataEntryPanel {
 			ddlg.setTargetCatalog(catalogField.getText().trim());
 		}
 
-		if (schemaField.isEnabled() &&
-			schemaField.getText() != null && schemaField.getText().trim().length() > 0) {
-
-			ddlg.setTargetSchema(schemaField.getText().trim());
-		}
-
 		return true;
 
 	}
@@ -302,14 +281,6 @@ public class DDLExportPanel implements DataEntryPanel {
 
 	private void disconnect() {
 	    plDotIni.removeDatabaseListChangeListener(databaseListChangeListener);
-	}
-
-	public JTextField getSchemaField() {
-		return schemaField;
-	}
-
-	public void setSchemaField(JTextField schemaField) {
-		this.schemaField = schemaField;
 	}
 
 	public JPanel getPanel() {
@@ -324,4 +295,12 @@ public class DDLExportPanel implements DataEntryPanel {
         // TODO return whether this panel has been changed
         return true;
     }
+
+	public JTextField getCatalogField( ) {
+		return catalogField;
+	}
+	
+	public void setCatalogField(JTextField catalogField) {
+		this.catalogField = catalogField;
+	}
 }

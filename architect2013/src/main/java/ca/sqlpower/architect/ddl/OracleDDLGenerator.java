@@ -309,9 +309,9 @@ public class OracleDDLGenerator extends GenericDDLGenerator {
      * The statement looks like <code>ALTER TABLE $fktable DROP CONSTRAINT $fkname</code>.
      */
     @Override
-    public String makeDropForeignKeySQL(String fkTable, String fkName) {
+    public String makeDropForeignKeySQL(String schemaName, String fkTable, String fkName) {
         return "\nALTER TABLE "
-            + toQualifiedName(fkTable)
+            + toQualifiedName(schemaName, fkTable)
             + " DROP CONSTRAINT "
             + fkName;
     }
@@ -334,7 +334,7 @@ public class OracleDDLGenerator extends GenericDDLGenerator {
 		Map<String, SQLObject> colNameMap = new HashMap<String, SQLObject>();
 		SQLTable t = c.getParent();
 		print("\nALTER TABLE ");
-		print(toQualifiedName(t.getPhysicalName()));
+		print(toQualifiedName(t));
 		print(" MODIFY ");
 		print(columnDefinition(c,colNameMap, alter));
 		endStatement(StatementType.MODIFY, c);
@@ -383,7 +383,7 @@ public class OracleDDLGenerator extends GenericDDLGenerator {
             print("BITMAP ");
         }
         print("INDEX ");
-        print(toQualifiedName(index.getName()));
+        print(toQualifiedName(index));
         print("\n ON ");
         print(toQualifiedName(index.getParent()));
         print("\n ( ");

@@ -28,12 +28,14 @@ import java.util.Set;
 
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
+import javax.swing.tree.TreePath;
 
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.swingui.ArchitectFrame;
 import ca.sqlpower.architect.swingui.ArchitectSwingSession;
 import ca.sqlpower.architect.swingui.ContainerPane;
+import ca.sqlpower.architect.swingui.DBTree;
 import ca.sqlpower.architect.swingui.PlayPen;
 import ca.sqlpower.architect.swingui.PlayPenComponent;
 import ca.sqlpower.architect.swingui.PlayPenLabel;
@@ -50,6 +52,7 @@ import ca.sqlpower.sqlobject.SQLIndex;
 import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLRelationship;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 
 public class DeleteSelectedAction extends AbstractArchitectAction {
@@ -86,6 +89,20 @@ public class DeleteSelectedAction extends AbstractArchitectAction {
         logger.debug("delete action detected!"); //$NON-NLS-1$
         logger.debug("ACTION COMMAND: " + evt.getActionCommand()); //$NON-NLS-1$
 
+        if (evt.getActionCommand().equals(DBTree.ACTION_COMMAND_SRC_DBTREE)){
+			TreePath [] selections = getSession().getDBTree().getSelectionPaths();
+	        for ( int i = 0; i < selections.length; i++){
+	        	SQLObject so = (SQLObject) selections[i].getLastPathComponent();
+	        	if ( so instanceof SQLSchema ) {
+                	JOptionPane.showMessageDialog(frame, 
+        					Messages.getString("PlayPenSchemaAction.unableToDeleteSchema"), 
+        					Messages.getString("Action.errorMessageDialogTitle"),
+        					JOptionPane.ERROR_MESSAGE);
+                	return;
+	        	}
+	        }
+        }
+        
         if (getPlaypen().getSelectedItems().size() < 1) {
             JOptionPane.showMessageDialog(getPlaypen(), Messages.getString("DeleteSelectedAction.noItemsToDelete")); //$NON-NLS-1$
             return;
