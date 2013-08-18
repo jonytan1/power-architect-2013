@@ -28,6 +28,7 @@ import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLDatabase;
 import ca.sqlpower.sqlobject.SQLIndex;
 import ca.sqlpower.sqlobject.SQLRelationship;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.sqlobject.StubSQLObject;
 
@@ -48,34 +49,66 @@ public class TestSQLObjectChildrenInsert extends TestCase {
 		
 	}
 	
-	public void testDatabaseInsert() throws Exception {
+	public void testDatabaseInsertSchemas() throws Exception {
 		
 		// setup a playpen like database
 		SQLDatabase db = new SQLDatabase();
 		SPObjectUndoManager undoManager = new SPObjectUndoManager(db);
 		db.setPlayPenDatabase(true);
-		SQLTable table1 = new SQLTable(db,"table1","remark1","TABLE",true);
-		SQLTable table2 = new SQLTable(db,"table2","remark2","TABLE",true);
-		SQLTable table3 = new SQLTable(db,"table3","remark3","TABLE",true);
-		SQLTable table4 = new SQLTable(db,"table4","remark4","TABLE",true);
-		db.addChild(table1);
-		db.addChild(table2);
-		db.addChild(table3);
-		db.addChild(table4);
+		SQLSchema schema1 = new SQLSchema(db,"schema1",true);
+		SQLSchema schema2 = new SQLSchema(db,"schema2",true);
+		SQLSchema schema3 = new SQLSchema(db,"schema3",true);
+		SQLSchema schema4 = new SQLSchema(db,"schema4",true);
+		db.addChild(schema1);
+		db.addChild(schema2);
+		db.addChild(schema3);
+		db.addChild(schema4);
 		db.removeChild(db.getChild(2));
 		undoManager.undo();
 		assertEquals("There should be 4 children",4,db.getChildCount());
-		assertEquals("The first table is in the wrong position",table1,db.getChild(0));
-		assertEquals("The Second table is in the wrong position",table2,db.getChild(1));
-		assertEquals("The Third table is in the wrong position",table3,db.getChild(2));
-		assertEquals("The Fourth table is in the wrong position",table4,db.getChild(3));
+		assertEquals("The first table is in the wrong position",schema1,db.getChild(0));
+		assertEquals("The Second table is in the wrong position",schema2,db.getChild(1));
+		assertEquals("The Third table is in the wrong position",schema3,db.getChild(2));
+		assertEquals("The Fourth table is in the wrong position",schema4,db.getChild(3));
 		
 
 		undoManager.redo();
 		assertEquals("There should be 3 children",3,db.getChildCount());
-		assertEquals("The first table is in the wrong position",table1,db.getChild(0));
-		assertEquals("The Second table is in the wrong position",table2,db.getChild(1));
-		assertEquals("The Third table is in the wrong position",table4,db.getChild(2));
+		assertEquals("The first table is in the wrong position",schema1,db.getChild(0));
+		assertEquals("The Second table is in the wrong position",schema2,db.getChild(1));
+		assertEquals("The Third table is in the wrong position",schema4,db.getChild(2));
+		
+	}
+	
+	public void testDatabaseInsertTables() throws Exception {
+		
+		// setup a playpen like database
+		SQLDatabase db = new SQLDatabase();
+		SPObjectUndoManager undoManager = new SPObjectUndoManager(db);
+		db.setPlayPenDatabase(true);
+		SQLSchema schema = db.getDefaultSchema();
+		SQLTable table1 = new SQLTable(schema,"table1","remark1","TABLE",true);
+		SQLTable table2 = new SQLTable(schema,"table2","remark2","TABLE",true);
+		SQLTable table3 = new SQLTable(schema,"table3","remark3","TABLE",true);
+		SQLTable table4 = new SQLTable(schema,"table4","remark4","TABLE",true);
+		schema.addChild(table1);
+		schema.addChild(table2);
+		schema.addChild(table3);
+		schema.addChild(table4);
+		schema.removeChild(schema.getChild(2));
+		undoManager.undo();
+		assertEquals("There should be 4 children",4,schema.getChildCount());
+		assertEquals("The first table is in the wrong position",table1,schema.getChild(0));
+		assertEquals("The Second table is in the wrong position",table2,schema.getChild(1));
+		assertEquals("The Third table is in the wrong position",table3,schema.getChild(2));
+		assertEquals("The Fourth table is in the wrong position",table4,schema.getChild(3));
+		
+
+		undoManager.redo();
+		assertEquals("There should be 3 children",3,schema.getChildCount());
+		assertEquals("The first table is in the wrong position",table1,schema.getChild(0));
+		assertEquals("The Second table is in the wrong position",table2,schema.getChild(1));
+		assertEquals("The Third table is in the wrong position",table4,schema.getChild(2));
 		
 	}
 	
