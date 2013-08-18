@@ -324,7 +324,7 @@ public class SQLObjectUtils {
     public static List<SQLColumn> findColumnsSourcedFromDatabase(SQLDatabase target, SQLDatabase source) throws SQLObjectException {
     	if (logger.isDebugEnabled()) logger.debug("Searching for dependencies on "+source+" in "+target);
     	List<SQLColumn> matches = new ArrayList<SQLColumn>();
-    	Iterator<?> it = target.getChildren().iterator();
+    	Iterator<?> it = target.getTables().iterator();
     	while (it.hasNext()) {
     		SQLObject so = (SQLObject) it.next();
     		if (logger.isDebugEnabled()) logger.debug("-->Next target item is "+so.getClass().getName()+": "+so+" ("+so.getChildCount()+" children)");

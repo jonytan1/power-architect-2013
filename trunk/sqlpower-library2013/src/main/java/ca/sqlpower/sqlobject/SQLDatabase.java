@@ -112,7 +112,11 @@ public class SQLDatabase extends SQLObject implements java.io.Serializable, Prop
 	private final List<SQLSchema> schemas = new ArrayList<SQLSchema>();
 	
 	private final List<SQLTable> tables = new ArrayList<SQLTable>();
-	
+
+    private SQLSchema defaultSchema = null;
+
+    public final static String defaultSchemaName = "default";
+
 	/**
 	 * The internal name of the database if the data source is null or if
 	 * it is the play pen database.
@@ -919,6 +923,7 @@ public class SQLDatabase extends SQLObject implements java.io.Serializable, Prop
 		}
 		int index = schemas.indexOf(child);
 		if (index != -1) {
+			if (this.defaultSchema == child) this.defaultSchema = null;
 			 schemas.remove(index);
 			 fireChildRemoved(SQLSchema.class, child, index);
 			 child.setParent(null);
@@ -1010,19 +1015,116 @@ public class SQLDatabase extends SQLObject implements java.io.Serializable, Prop
 	 * The child types for a database change as children are added. This is
 	 * different from most other cases but the order of the allowed children
 	 * will remain the same as the order specified by {@link #allowedChildTypes}.
+	 * SQLSchema is the sole type under PlayPenDatabase.
 	 */
 	@NonProperty
 	public List<Class<? extends SPObject>> getAllowedChildTypes() {
 		List<Class<? extends SPObject>> types = new ArrayList<Class<? extends SPObject>>();
-		if (schemas.isEmpty() && tables.isEmpty()) {
-			types.add(SQLCatalog.class);
-		}
-		if (catalogs.isEmpty() && tables.isEmpty()) {
+		if (this.playPenDatabase){
 			types.add(SQLSchema.class);
-		}
-		if (catalogs.isEmpty() && schemas.isEmpty()) {
-			types.add(SQLTable.class);
+		} else {
+			if (schemas.isEmpty() && tables.isEmpty()) {
+				types.add(SQLCatalog.class);
+			}
+			if (catalogs.isEmpty() && tables.isEmpty()) {
+				types.add(SQLSchema.class);
+			}
+			if (catalogs.isEmpty() && schemas.isEmpty()) {
+				types.add(SQLTable.class);
+			}
 		}
 		return Collections.unmodifiableList(types);
 	}
+
+	@NonProperty
+    public String getDefaultSchemaName(){
+        if ( !this.playPenDatabase ) return "";
+        return refreshDefaultSchema( null ).getName();
+    }
+
+    @NonProperty
+    public void setDefaultSchemaName( String schemaName ){
+        firePropertyChange("defaultSchemaName", 
+                (this.defaultSchema == null ? 
+                        SQLDatabase.defaultSchemaName : this.defaultSchema.getName()),
+                schemaName);
+        if ( !this.playPenDatabase ) return;
+        // default name of schema is not null.
+        if (schemaName == null || schemaName.trim().length() == 0) return;
+        refreshDefaultSchema(schemaName);
+    }
+
+    /**
+     * Refresh and get the default schema when this is a PlayPenDatabase. <br>
+     * Otherwise, return is null.<br>
+     * <ul><li>This is not a playPenDatabase, then the return is null, that mean no default schema.<br>
+     *             <li>schemaName is null:<br>
+     *                 1) default schema is found, then to be returned directly.<br>
+     *                 2) default schema is not found, then to get the first element from the list of schemas;
+     *                     if the list is empty, then a schema named "default" is created, and to be regarded as 
+     *                     the default schema and to be returned.<br>
+     *             <li>schemaName is not null:<br>
+     *                 1) default schema is found, and its name is equal(IgnoreCase) to schemaName, 
+     *                     then to be returned directly.<br>
+     *                 2) default schema is not found, or it is found but its name is not equal(IgnoreCase) 
+     *                     to schemaName, then:<br>
+     *                     if the schema(named by schemaName) is found by name from the list of schemas, 
+     *                     then to be regarded as the default schema and to be returned.<br>
+     *                     if the schema(named by schemaName) is not found, then to be created, and to be
+     *                     inserted into the list, and to be regarded as the default schema and to be returned.<br>
+     * @param schemaName
+     * @return
+     */
+    private SQLSchema refreshDefaultSchema( String schemaName ){
+        if ( !this.playPenDatabase ) return null;
+
+        if ( schemaName == null || schemaName.trim().length() == 0 ) {
+            if ( this.defaultSchema == null ){ 
+                if ( !this.schemas.isEmpty() ) {
+                    this.defaultSchema = this.schemas.get(0);
+                    return this.schemas.get(0);
+                } else {
+                    this.defaultSchema = new SQLSchema(this, defaultSchemaName, true);
+                    this.schemas.add(this.defaultSchema);
+                    fireChildAdded(SQLSchema.class, this.defaultSchema, this.schemas.size()-1);
+                }
+            }
+            return this.defaultSchema;
+        }
+
+        schemaName = schemaName.trim();
+        if ( this.defaultSchema != null && schemaName.equalsIgnoreCase(this.defaultSchema.getName()) )
+            return this.defaultSchema;
+
+        for (SQLSchema child : this.schemas) {
+            if ( schemaName.equalsIgnoreCase(child.getName())){
+                this.defaultSchema = child;
+                return this.defaultSchema;
+            }
+        }
+        this.defaultSchema = new SQLSchema(this, schemaName, true);
+        this.schemas.add(this.defaultSchema);
+        fireChildAdded(SQLSchema.class, this.defaultSchema, this.schemas.size()-1);
+
+        return this.defaultSchema;
+    }
+
+    /**
+     * Get the default schema from outside of PlayPenDatabase object.
+     * @return
+     */
+    @NonProperty
+    public SQLSchema getDefaultSchema(){
+        return this.refreshDefaultSchema( null );
+    }
+
+    /**
+     * Get the schema by name under this PlayPenDatabase. If not found, to create it.
+     * @param name
+     * @return
+     */
+    @NonProperty
+    public SQLSchema getPlayPenSchema( String name ){
+        return this.refreshDefaultSchema( name );
+    }
 }

@@ -377,4 +377,23 @@ public class SQLSchema extends SQLObject {
 		return allowedChildTypes;
 	}
 
+	/**
+	 * A table is removed from this schema and waits for adding to another schema.
+	 * @param table
+	 * @return
+	 */
+	public boolean removeTableAndWaiting(SQLTable table){
+		if (isMagicEnabled() && table.getParent() != this) {
+			throw new IllegalStateException("Cannot remove child " + table.getPhysicalName() + 
+					" of type " + table.getClass() + " as its parent is not " + getPhysicalName());
+		}
+		int index = tables.indexOf(table);
+		if (index != -1) {
+			 tables.remove(index);
+			 fireChildRemoved(SQLTable.class, table, index);
+			 table.setParent(null);
+			 return true;
+		}
+		return false;		
+	}
 }

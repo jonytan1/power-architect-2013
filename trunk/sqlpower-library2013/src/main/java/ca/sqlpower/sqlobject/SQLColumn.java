@@ -51,6 +51,7 @@ import ca.sqlpower.sqlobject.SQLTypePhysicalPropertiesProvider.PropertyType;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
 import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
+import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.UserPrompter;
 import ca.sqlpower.util.UserPrompterFactory;
 
@@ -1537,5 +1538,11 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
     @NonProperty @Override
     public String getNodeTitle(RenderType type){
         return getTitleByRenderType(type) + ": " + getTypeName();
+    }
+
+    @NonProperty
+    public String getSchemaName(){
+    	SQLSchema schema = SQLPowerUtils.getAncestor(this, SQLSchema.class);
+    	return (schema == null ? "" : schema.getName());
     }
 }

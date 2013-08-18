@@ -133,6 +133,11 @@ public class SQLTable extends SQLObject {
      * Determinant of whether this table's imported keys have been populated.
      */
     private boolean importedKeysPopulated = false;
+
+    /**
+     * Valid only after editing the table's properties.
+     */
+    private String playPenSchemaName=null;
     
     public SQLTable(SQLObject parent, String name, String remarks, String objectType, 
     		boolean startPopulated) throws SQLObjectException {
@@ -303,7 +308,10 @@ public class SQLTable extends SQLObject {
 		populateRelationships();
 		populateImportedKeys();
         SQLIndex newPKIndex = new SQLIndex();
-        SQLTable t = new SQLTable(parent, getName(), remarks, "TABLE", true, newPKIndex);
+        SQLObject actualParent = parent;
+        if ( parent.isPlayPenDatabase() ) actualParent = parent.getPlayPenSchema(this.getParent().getName());
+
+        SQLTable t = new SQLTable(actualParent, getName(), remarks, "TABLE", true, newPKIndex);
 		for (Map.Entry<Class<? extends SQLObject>, Throwable> inaccessibleReason : getChildrenInaccessibleReasons().entrySet()) {
         	t.setChildrenInaccessibleReason(inaccessibleReason.getValue(), inaccessibleReason.getKey(), false);
         }
@@ -311,7 +319,7 @@ public class SQLTable extends SQLObject {
 		t.inherit(this, transferStyle, preserveColumnSource);
         inheritIndices(this, t);
         
-		parent.addChild(t);
+        actualParent.addChild(t);
 		return t;
 	}
 	
@@ -1405,7 +1413,14 @@ public class SQLTable extends SQLObject {
 	 */
 	@Mutator
 	public void setParent(SQLObject parent) {
-		super.setParent(parent);
+        if ( parent != null && parent instanceof SQLDatabase ){
+            SQLDatabase db = ( SQLDatabase ) parent;
+            if( db.isPlayPenDatabase() ){
+                super.setParent(db.getDefaultSchema());
+                return;
+            }
+        }
+        super.setParent(parent);
 	}
 
 	/**
@@ -2177,5 +2192,54 @@ public class SQLTable extends SQLObject {
     public String getNodeTitle(RenderType type){
     	if (this.objectType == null) return getTitleByRenderType(type);
         return getTitleByRenderType(type) + " (" + this.objectType + ")";
+    }
+
+    /**
+     * Get the selected schema name after editing the table's properties.
+     * @return
+     */
+    @NonProperty
+    public String getPlayPenSchemaName(){
+        return playPenSchemaName;
+    }
+
+    /**
+     * Remain the selected schema name after editing the table's properties.
+     * @param newSchema
+     */
+    @NonProperty
+    public void setPlayPenSchemaName(String playPenSchemaName){
+        this.firePropertyChange("playPenSchemaName", this.playPenSchemaName, playPenSchemaName);
+        this.playPenSchemaName = playPenSchemaName;
+    }
+
+    /**
+     * The table moved under a new schema of playPenDatabase.
+     * @param newSchema
+     */
+    public void moveToAnotherSchema( SQLSchema newSchema ){
+        this.setPlayPenSchemaName(newSchema == null ? null : newSchema.getName());
+        
+        SQLDatabase playPenDB = this.getParentDatabase();
+        //When the table is new, it is not under playPenDatabase. So playPenDB == null;
+        if (playPenDB == null) return;
+        
+        if (playPenDB.isPlayPenDatabase()){
+            SQLObject parent = this.getParent();
+            if ( parent != newSchema ){
+                try {
+                    if ( parent != null && parent instanceof SQLSchema ){
+                        ( ( SQLSchema ) parent).removeTableAndWaiting(this);
+                    }
+                    if ( newSchema != null ) {
+                        newSchema.addChild(this);
+                    }
+                } catch (IllegalArgumentException e) {
+                    logger.debug(e.toString());
+                } catch (SQLObjectException e) {
+                    logger.debug(e.toString());
+                }
+            }
+        }
     }
 }
