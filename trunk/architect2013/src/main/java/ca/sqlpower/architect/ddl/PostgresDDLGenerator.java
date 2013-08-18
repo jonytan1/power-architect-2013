@@ -269,9 +269,9 @@ public class PostgresDDLGenerator extends GenericDDLGenerator {
      * The statement looks like <code>ALTER TABLE ONLY $fktable DROP CONSTRAINT $fkname</code>.
      */
     @Override
-    public String makeDropForeignKeySQL(String fkTable, String fkName) {
+    public String makeDropForeignKeySQL(String schemaName, String fkTable, String fkName) {
         return "\nALTER TABLE ONLY "
-            + toQualifiedName(fkTable)
+            + toQualifiedName(schemaName, fkTable)
             + " DROP CONSTRAINT "
             + fkName;
     }
@@ -393,7 +393,7 @@ public class PostgresDDLGenerator extends GenericDDLGenerator {
             if (c.isAutoIncrement()) {
                 SQLSequence seq = new SQLSequence(toIdentifier(c.getAutoIncrementSequenceName()));
                 print("\nCREATE SEQUENCE ");
-                print(toQualifiedName(seq.getName()));
+                print(toQualifiedName(t.getParent(), seq.getName()));
                 endStatement(StatementType.CREATE, seq);
             }
         }
@@ -404,7 +404,7 @@ public class PostgresDDLGenerator extends GenericDDLGenerator {
         for (SQLColumn c : t.getColumns()) {
             if (c.isAutoIncrement()) {
                 SQLSequence seq = new SQLSequence(toIdentifier(c.getAutoIncrementSequenceName()));
-                print("\nALTER SEQUENCE " + toQualifiedName(seq.getName()) + " OWNED BY " + toQualifiedName(t) + "." + c.getPhysicalName());
+                print("\nALTER SEQUENCE " + toQualifiedName(t.getParent(), seq.getName()) + " OWNED BY " + toQualifiedName(t) + "." + c.getPhysicalName());
                 endStatement(StatementType.CREATE, seq);
             }
         }
@@ -421,7 +421,8 @@ public class PostgresDDLGenerator extends GenericDDLGenerator {
 
         if (c.isAutoIncrement()) {
             SQLSequence seq = new SQLSequence(toIdentifier(c.getAutoIncrementSequenceName()));
-            return nameAndType + " DEFAULT nextval(" + SQL.quote(toQualifiedName(seq.getName())) + ")";
+            return nameAndType + " DEFAULT nextval("
+                    + SQL.quote(toQualifiedName(c.getSchemaName(), seq.getName())) + ")";
         } else {
             return nameAndType;
         }
@@ -437,7 +438,7 @@ public class PostgresDDLGenerator extends GenericDDLGenerator {
 		print("ALTER INDEX ");
 		print(toQualifiedName(oldIndex));
 		print(" RENAME TO ");
-		println(toQualifiedName(newIndex.getName()));
+		println(toQualifiedName(newIndex));
 		endStatement(StatementType.ALTER, oldIndex);
 	}
 

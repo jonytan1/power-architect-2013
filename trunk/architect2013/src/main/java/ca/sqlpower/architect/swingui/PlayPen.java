@@ -2128,7 +2128,8 @@ public class PlayPen extends JPanel
 			if (tpTarget != null) {
 				tpTarget.dragOver(dtde);
 			} else {
-				dtde.acceptDrag(DnDConstants.ACTION_COPY_OR_MOVE & dtde.getDropAction());
+				DropTarget target = ( DropTarget )dtde.getSource();
+				dtde.acceptDrag(DnDConstants.ACTION_COPY & target.getDefaultActions());
 			}
 		}
 

@@ -367,7 +367,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
     @Override
     public String getCatalogTerm() {
-        return "Database";
+        return null;
     }
 
     @Override
@@ -444,7 +444,7 @@ public class MySqlDDLGenerator extends GenericDDLGenerator {
 
     @Override
     public void dropPrimaryKey(SQLTable t) {
-        print("\nALTER TABLE " + toQualifiedName(t.getPhysicalName()) + " DROP PRIMARY KEY");
+        print("\nALTER TABLE " + toQualifiedName(t) + " DROP PRIMARY KEY");
         endStatement(StatementType.DROP, t);
     }
     

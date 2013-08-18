@@ -406,7 +406,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 		// Since 1.0.7, generate the statements about comment.
         if ( needGenerateComment( t.getPhysicalName(), t.getRemarks())){
             String comment = t.getRemarks().trim();
-            String schema = getTargetSchema();
+            String schema = t.getSchemaName();
             if (schema != null && schema.length() > 0 ) {
                 print("\nEXECUTE SP_ADDEXTENDEDPROPERTY 'MS_Description','" +
                         comment.replaceAll("'", "''") + "','user','" + 
@@ -422,7 +422,7 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
 	@Override
     public void addComment(SQLColumn c) {
         if ( needGenerateComment( c.getPhysicalName(), c.getRemarks())){
-            String schema = getTargetSchema();
+            String schema = c.getSchemaName();
             String tableName = c.getParent().getName();
             String comment = c.getRemarks().trim();
             if (schema != null && schema.length() > 0 ) {
@@ -530,15 +530,15 @@ public abstract class SQLServerDDLGenerator extends GenericDDLGenerator {
     @Override
     public void dropPrimaryKey(SQLTable t) {
         SQLIndex pk = t.getPrimaryKeyIndex();
-        print("\nALTER TABLE " + toQualifiedName(t.getName())
+        print("\nALTER TABLE " + toQualifiedName(t.getSchemaName(), t.getPhysicalName())
                 + " DROP " + pk.getPhysicalName());
         endStatement(StatementType.DROP, t);
     }
 
     @Override
-    public String makeDropForeignKeySQL(String fkTable, String fkName) {
+    public String makeDropForeignKeySQL(String schemaName, String fkTable, String fkName) {
         return "\nALTER TABLE "
-        +toQualifiedName(fkTable)
+        +toQualifiedName(schemaName, fkTable)
         +" DROP CONSTRAINT "
         +fkName;
     }

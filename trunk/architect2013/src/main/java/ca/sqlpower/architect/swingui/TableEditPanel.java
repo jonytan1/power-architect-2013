@@ -34,7 +34,10 @@ import javax.swing.JTextField;
 
 import org.apache.log4j.Logger;
 
+import ca.sqlpower.architect.swingui.dbtree.SchemaCellRenderer;
 import ca.sqlpower.sqlobject.SQLIndex;
+import ca.sqlpower.sqlobject.SQLObject;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.swingui.ChangeListeningDataEntryPanel;
 import ca.sqlpower.swingui.ColorCellRenderer;
@@ -48,6 +51,7 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
      * The frame which this table edit panel resides in.
      */
     private JPanel panel;
+    private JComboBox playPenSchema;
 	private SQLTable table;
 	private JTextField logicalName;
 	private JTextField physicalName;
@@ -82,6 +86,16 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 	public TableEditPanel(ArchitectSwingSession session, SQLTable t) {
 		this.panel = new JPanel(new FormLayout());
 		this.tablePane = session.getPlayPen().findTablePane(t);
+		
+        panel.add(new JLabel(Messages.getString("TableEditPanel.schemaNameLabel"))); //$NON-NLS-1$
+        Object[] schemas = session.getTargetDatabase().getChildren(SQLSchema.class).toArray();
+        playPenSchema = new JComboBox( schemas );
+        
+        playPenSchema.setRenderer(new SchemaCellRenderer( Messages.getString("TableEditPanel.defaultPlayPenSchema")));
+        panel.add(playPenSchema); //$NON-NLS-1$   
+        if ( schemas.length > 1 ) playPenSchema.setSelectedItem(session.getTargetDatabase().getPlayPenSchema(null));
+        playPenSchema.setPrototypeDisplayValue("TableEditPanel.defaultPlayPenSchema   ");
+
         panel.add(new JLabel(Messages.getString("TableEditPanel.tableLogicalNameLabel"))); //$NON-NLS-1$
         panel.add(logicalName = new JTextField("", 30)); //$NON-NLS-1$        
         panel.add(new JLabel(Messages.getString("TableEditPanel.tablePhysicalNameLabel"))); //$NON-NLS-1$
@@ -134,6 +148,13 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
     		dashed.setSelected(tablePane.isDashed());
     		rounded.setSelected(tablePane.isRounded());
 		}
+		SQLObject parent = t.getParent();
+		t.setPlayPenSchemaName(parent == null ? null : parent.getPhysicalName());
+		if ( parent != null ){
+			if (parent instanceof SQLSchema ){
+				playPenSchema.setSelectedItem(parent);
+			}
+		}
 	}
 
 	// --------------------- ArchitectPanel interface ------------------
@@ -158,6 +179,8 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 	        table.setName(logicalName.getText());
 	        table.setRemarks(remarks.getText());   
 
+	        table.moveToAnotherSchema((SQLSchema) playPenSchema.getSelectedItem());
+	        
 	        if (tablePane != null) {
 	            tablePane.begin("TableEditPanel.compoundEditName");
 	            if (!tablePane.getBackgroundColor().equals((Color)bgColor.getSelectedItem())) {
