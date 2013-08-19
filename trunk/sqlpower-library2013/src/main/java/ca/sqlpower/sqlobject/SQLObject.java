@@ -850,4 +850,16 @@ public abstract class SQLObject extends AbstractSPObject implements java.io.Seri
     public String getTitleByRenderType(RenderType type){
         return (RenderType.LogicalName.equals(type) ? getName() : getPhysicalName());
     }
+    
+    /**
+     * 
+	 * Adds the given SQLObject to this SQLObject by calling {@link #addChild(SQLObject)}.
+	 * This method is only used to upgrade the single-schema project file to multi-schema 
+	 * project file. SQLDatabase will override this method.
+     * @param newChild
+     * @throws SQLObjectException
+     */
+    public void addChildForUpgradingProject(SQLObject newChild) throws SQLObjectException {
+		this.addChild(newChild);
+	}
 }
