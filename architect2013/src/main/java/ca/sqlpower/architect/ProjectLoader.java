@@ -447,7 +447,7 @@ public class ProjectLoader {
         d.addFactoryCreate("*/table", tableFactory);
         d.addSetProperties("*/table");
         d.addCallMethod("*/remarks", "setRemarks", 0);
-        d.addSetNext("*/table", "addChild");
+        d.addSetNext("*/table", "addChildForUpgradingProject");
 
         d.addFactoryCreate("*/folder", new SQLFolderFactory());
 

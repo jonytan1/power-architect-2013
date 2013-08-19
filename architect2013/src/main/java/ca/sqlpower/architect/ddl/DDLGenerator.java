@@ -311,7 +311,9 @@ public interface DDLGenerator {
      * The name that the target database gives to the JDBC idea of
      * "schema."  For Oracle, this would be "Schema" and for SQL
      * Server it would be "Owner".
+     * @since 1.0.7, Multi-schema is supported. This method now is unusable.
      */
+    @Deprecated
     public String getSchemaTerm();
 
     public void dropPrimaryKey(SQLTable t) throws SQLObjectException;
