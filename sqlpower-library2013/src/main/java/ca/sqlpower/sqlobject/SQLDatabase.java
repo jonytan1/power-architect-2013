@@ -1127,4 +1127,13 @@ public class SQLDatabase extends SQLObject implements java.io.Serializable, Prop
     public SQLSchema getPlayPenSchema( String name ){
         return this.refreshDefaultSchema( name );
     }
+
+    @Override
+    public void addChildForUpgradingProject(SQLObject newChild) throws SQLObjectException {
+    	if ( this.isPlayPenDatabase() && newChild instanceof SQLTable ){
+    		this.getDefaultSchema().addChild(newChild);
+    		return;
+    	}
+    	this.addChild(newChild);
+	}
 }
