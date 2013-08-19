@@ -610,7 +610,7 @@ public class SQLColumn extends SQLObject implements java.io.Serializable, SPVari
 
             	if (upstreamType.getNullability() != null
             			&& upstreamType.getNullability().equals(type.getNullability())) {
-            		type.setMyNullability(null);
+            		type.setMyNullability(upstreamType.getNullability());
             	}
 
             	if (upstreamType.getDefaultValue(fromPlatform) != null
