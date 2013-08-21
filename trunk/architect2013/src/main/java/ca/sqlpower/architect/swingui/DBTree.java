@@ -47,6 +47,7 @@ import java.util.Set;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.InputMap;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -87,6 +88,7 @@ import ca.sqlpower.sqlobject.SQLObjectUtils;
 import ca.sqlpower.sqlobject.SQLRelationship;
 import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
+import ca.sqlpower.sqlobject.sortcomparator.SQLObjectSortComparator;
 import ca.sqlpower.swingui.JDBCDataSourcePanel;
 import ca.sqlpower.swingui.JTreeCollapseAllAction;
 import ca.sqlpower.swingui.JTreeExpandAllAction;
@@ -438,6 +440,12 @@ public class DBTree extends JTree implements DragSourceListener {
         	mi.setActionCommand(ACTION_COMMAND_SRC_DBTREE);
             newMenu.add(mi);
             
+            JMenu sort = new JMenu(Messages.getString("DBTree.sortMenu"));
+            sort.add(new SortCheckBoxMenuItem(
+            		Messages.getString("DBTree.sortedByPhysicalNameMenu"),
+            		(DBTreeModel) this.getModel(), p,
+            		schema, SQLObjectSortComparator.Type.ByPhysicalName));
+            newMenu.add(sort);
         }
 
         if (!isTargetDatabaseNode(p) && isTargetDatabaseChild(p)) {
@@ -1237,77 +1245,77 @@ public class DBTree extends JTree implements DragSourceListener {
 
     private class DBTreeTransferHandler extends TransferHandler
     {
-    	/**
-		 * 
-		 */
-		private static final long serialVersionUID = 6970349716552751092L;
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 6970349716552751092L;
 
-		@Override
-    	public boolean canImport(TransferHandler.TransferSupport support) {
-    		if (!(support.getDropLocation() instanceof JTree.DropLocation)) return false;
-    		Transferable t = support.getTransferable();
-    		if (!support.isDrop()) return false;
-    		
-    		TreePath targetPath = getTargetTreePath((JTree.DropLocation) support.getDropLocation());
-    		SQLSchema targetSchema = getTargetSchema(targetPath);
-    		if (targetSchema == null) return false;
-    		
-			int action = (MOVE & support.getSourceDropActions());
-			if (action == 0) return false;
-			support.setDropAction(action);
+        @Override
+        public boolean canImport(TransferHandler.TransferSupport support) {
+            if (!(support.getDropLocation() instanceof JTree.DropLocation)) return false;
+            Transferable t = support.getTransferable();
+            if (!support.isDrop()) return false;
 
-    		if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
-    	        try {
+            TreePath targetPath = getTargetTreePath((JTree.DropLocation) support.getDropLocation());
+            SQLSchema targetSchema = getTargetSchema(targetPath);
+            if (targetSchema == null) return false;
+
+            int action = (MOVE & support.getSourceDropActions());
+            if (action == 0) return false;
+            support.setDropAction(action);
+
+            if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
+                try {
                     SQLObject[] paths = (SQLObject[]) t.getTransferData(
                             SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR);
                     for (SQLObject oo : paths) {
                         if (oo instanceof SQLTable) {
-                        	SQLTable table = (SQLTable) oo;
-                        	if (table.getParent() == targetSchema) return false;
-                        	if (!table.getParentDatabase().isPlayPenDatabase()) 
-                        		return false;;
+                            SQLTable table = (SQLTable) oo;
+                            if (table.getParent() == targetSchema) return false;
+                            if (!table.getParentDatabase().isPlayPenDatabase()) 
+                                return false;;
                         } else {
                             return false;
                         }
                     }
-    	        } catch (Throwable e) {
-    	            return false;
-    	        }
-    	        return true;
-    	    }
-  			return false;
-    	}
-    	
-    	private SQLSchema getTargetSchema(TreePath path){
-    		return getTargetSchemaUnderTargetDatabase(path);
-    	}
+                } catch (Throwable e) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
 
-    	private TreePath getTargetTreePath(JTree.DropLocation dropLocation){
-    		return dropLocation.getPath();
-    	}
-    	
-    	@Override
-    	public boolean importData(TransferHandler.TransferSupport support){
-    		if (!canImport(support)){
-    			return false;
-    		}
-    		TreePath targetPath = getTargetTreePath((JTree.DropLocation) support.getDropLocation());
-    		SQLSchema targetSchema = getTargetSchema(targetPath);
-    		if (targetSchema == null) return false;
+        private SQLSchema getTargetSchema(TreePath path){
+            return getTargetSchemaUnderTargetDatabase(path);
+        }
 
-    		Transferable t = support.getTransferable();
-    	    if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
-    	        targetSchema.begin("Move table(s) to schema \"" + targetSchema.getName() + "\"" );
-    	        try {
+        private TreePath getTargetTreePath(JTree.DropLocation dropLocation){
+            return dropLocation.getPath();
+        }
+
+        @Override
+        public boolean importData(TransferHandler.TransferSupport support){
+            if (!canImport(support)){
+                return false;
+            }
+            TreePath targetPath = getTargetTreePath((JTree.DropLocation) support.getDropLocation());
+            SQLSchema targetSchema = getTargetSchema(targetPath);
+            if (targetSchema == null) return false;
+
+            Transferable t = support.getTransferable();
+            if (t.isDataFlavorSupported(SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR)) {
+                targetSchema.begin("Move table(s) to schema \"" + targetSchema.getName() + "\"" );
+                try {
 
                     SQLObject[] paths = (SQLObject[]) t.getTransferData(
                             SQLObjectSelection.LOCAL_SQLOBJECT_ARRAY_FLAVOUR);
                     for (SQLObject oo : paths) {
                         if (oo instanceof SQLTable) {
-                        	SQLTable table = (SQLTable) oo;
-                        	if (!table.getParentDatabase().isPlayPenDatabase()) 
-                        		throw new SQLObjectException("The moved table (" + table.getName() + ") is not belong to PlayPenDatabase.");
-                        	table.moveToAnotherSchema(targetSchema);
+                            SQLTable table = (SQLTable) oo;
+                            if (!table.getParentDatabase().isPlayPenDatabase()) 
+                                throw new SQLObjectException("The moved table (" + table.getName() + ") is not belong to PlayPenDatabase.");
+                            table.moveToAnotherSchema(targetSchema);
                         } else {
                             logger.error("Unknown object moved in Schema: "+oo); //$NON-NLS-1$
                             throw new SQLObjectException("The moved object (" + oo.getName() + ") is not table.");
@@ -1316,13 +1324,33 @@ public class DBTree extends JTree implements DragSourceListener {
 
                     targetSchema.commit();
                     return true;
-    	        } catch (Throwable e) {
-    	        	targetSchema.rollback("Error occurred: " + e.toString());
-    	            throw new RuntimeException(e);
-    	        }
-    	    }
-    		return false;
-    	}
+                } catch (Throwable e) {
+                    targetSchema.rollback("Error occurred: " + e.toString());
+                    throw new RuntimeException(e);
+                }
+            }
+            return false;
+        }
     }
     
+    private class SortCheckBoxMenuItem extends JCheckBoxMenuItem {
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 4129646006596377921L;
+
+        public SortCheckBoxMenuItem( String title, final DBTreeModel model, final TreePath tp,
+                final SQLSchema sortedSchema, final SQLObjectSortComparator.Type type) {
+            super(title);
+            boolean sortedEnabled = sortedSchema.isComparator(type);
+            this.setSelected(sortedEnabled);
+            this.addActionListener(
+                new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        sortedSchema.setSortComparator(type);
+                        model.refreshTreePath(tp);
+                    }
+                });
+        }
+    }
 }
