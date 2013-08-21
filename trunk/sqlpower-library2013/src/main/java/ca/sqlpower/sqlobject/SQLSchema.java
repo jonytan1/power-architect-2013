@@ -33,7 +33,11 @@ import ca.sqlpower.object.annotation.Accessor;
 import ca.sqlpower.object.annotation.Constructor;
 import ca.sqlpower.object.annotation.ConstructorParameter;
 import ca.sqlpower.object.annotation.Mutator;
+import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
+import ca.sqlpower.sqlobject.sortcomparator.ArraySortedList;
+import ca.sqlpower.sqlobject.sortcomparator.SQLObjectSortComparator;
+import ca.sqlpower.sqlobject.sortcomparator.SortedList;
 import ca.sqlpower.util.SQLPowerUtils;
 
 /**
@@ -51,7 +55,7 @@ public class SQLSchema extends SQLObject {
 	
 	private static final Logger logger = Logger.getLogger(SQLSchema.class);
 	
-	private final List<SQLTable> tables = new ArrayList<SQLTable>();
+	private final SortedList<SQLTable> tables = new ArraySortedList<SQLTable>(new SQLTable[]{});
 	
     /**
      * Creates a list of unpopulated Schema objects corresponding to the list of
@@ -368,9 +372,10 @@ public class SQLSchema extends SQLObject {
 	}
 	
 	public void addTable(SQLTable table, int index) {
-		tables.add(index, table);
+		//ArraySortedList will add the table section at the opposite position. Not the end of tables.
+		tables.add(table);
 		table.setParent(this);
-		fireChildAdded(SQLTable.class, table, index);
+		fireChildAdded(SQLTable.class, table, tables.indexOf(table));
 	}
 
 	public List<Class<? extends SPObject>> getAllowedChildTypes() {
@@ -395,5 +400,15 @@ public class SQLSchema extends SQLObject {
 			 return true;
 		}
 		return false;		
+	}
+	
+	@NonProperty
+	public void setSortComparator(SQLObjectSortComparator.Type type){
+		tables.setSortComparator(type);
+	}
+	
+	@NonProperty
+	public boolean isComparator(SQLObjectSortComparator.Type type) {
+		return tables.isComparator(type);
 	}
 }
