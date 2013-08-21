@@ -238,21 +238,20 @@ public class ArraySortedList<E extends SQLObject> implements SortedList<E> {
 
 	@Override
 	public void setSortComparator(Type type) {
-		if (type != null && type == Type.BySequence ){
+		if (type == null) return;
+		if (type == Type.BySequence ){
 			comparator = new SQLObjectSortComparatorFactory<E>().createSortComparator(type);
 			return;
 		}
-		if ( type != null && !comparator.isComparator(type) ){
-			synchronized( this.sortedList ){
-				comparator = new SQLObjectSortComparatorFactory<E>().createSortComparator(type);
-				E[] children = (E[]) sortedList.toArray(eArray);
-	    		Arrays.sort( children, comparator);
-	    		List<E> newList = new ArrayList<E>();
-	    		for ( int i = 0; i < children.length; i++ ){
-	    			newList.add(children[i]);
-	    		}
-	    		sortedList = newList;
-			}
+		synchronized( this.sortedList ){
+			comparator = new SQLObjectSortComparatorFactory<E>().createSortComparator(type);
+			E[] children = (E[]) sortedList.toArray(eArray);
+    		Arrays.sort( children, comparator);
+    		List<E> newList = new ArrayList<E>();
+    		for ( int i = 0; i < children.length; i++ ){
+    			newList.add(children[i]);
+    		}
+    		sortedList = newList;
 		}
 	} 
 
