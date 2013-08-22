@@ -42,6 +42,7 @@ import ca.sqlpower.diff.PropertyChange;
 import ca.sqlpower.object.SPResolverRegistry;
 import ca.sqlpower.object.SPVariableHelper;
 import ca.sqlpower.object.SPVariableResolver;
+import ca.sqlpower.sqlobject.SQLCatalog;
 import ca.sqlpower.sqlobject.SQLCheckConstraint;
 import ca.sqlpower.sqlobject.SQLCheckConstraintVariableResolver;
 import ca.sqlpower.sqlobject.SQLCheckConstraintVariableResolver.SQLCheckConstraintVariable;
@@ -1137,8 +1138,8 @@ public class GenericDDLGenerator implements DDLGenerator {
 	 * Creates a qualified name from the physical name of the SQLIndex
 	 */
 	public String toQualifiedName(SQLIndex i) {
-		if (i.getParent() == null) return toQualifiedName("", i.getPhysicalName());
-        return toQualifiedName(i.getParent().getSchemaName(), i.getPhysicalName());
+		if (i.getParent() == null) return toQualifiedName((String)null, i.getPhysicalName());
+        return toQualifiedName(getSchemaName(i.getParent().getParent()), i.getPhysicalName());
     }
 
     /**
@@ -1152,7 +1153,7 @@ public class GenericDDLGenerator implements DDLGenerator {
      * schema are omitted if null).
      */
     public String toQualifiedName(String schemaName, String tname) {
-        String catalog = getTargetCatalog();
+        String catalog = (getCatalogTerm() == null ? null : getTargetCatalog());
 
         return DDLUtils.toQualifiedName(catalog, schemaName, tname);
     }
@@ -1490,7 +1491,13 @@ public class GenericDDLGenerator implements DDLGenerator {
     }
 
     private String getSchemaName(SQLObject schema){
-    	if (schema != null && schema instanceof SQLSchema) return schema.getName();
+    	if (schema == null) return null;
+    	if (schema instanceof SQLSchema) return schema.getName();
+        if (getCatalogTerm()==null && schema instanceof SQLCatalog){
+            //In some DB ( for example: MySQL, DB2 etc ), no Catalog. So the catalog nodes of 
+            //		a source connection in DBTree are related to schemas.
+            return schema.getName();
+        }
     	return null;
     }
 }
