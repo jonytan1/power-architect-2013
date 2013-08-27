@@ -39,6 +39,7 @@ import ca.sqlpower.architect.swingui.ASUtils;
 import ca.sqlpower.architect.swingui.ArchitectSwingSession;
 import ca.sqlpower.architect.swingui.DBTree;
 import ca.sqlpower.architect.swingui.dbtree.DBTreeModel;
+import ca.sqlpower.object.AbstractSPObject;
 import ca.sqlpower.sqlobject.SQLDatabase;
 import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.SQLObjectException;
@@ -151,11 +152,14 @@ public class RefreshAction extends AbstractArchitectAction {
         
         Set<SQLDatabase> databasesToRefresh = new HashSet<SQLDatabase>();
         for (TreePath tp : dbTree.getSelectionPaths()) {
-            SQLObject so = (SQLObject) tp.getLastPathComponent();
-            SQLDatabase db = SQLPowerUtils.getAncestor(so, SQLDatabase.class);
-            if (db != null && !db.isPlayPenDatabase()) {
-                databasesToRefresh.add(db);
-            }
+        	AbstractSPObject aspo = (AbstractSPObject) tp.getLastPathComponent();
+        	if (aspo instanceof SQLObject){
+                SQLObject so = (SQLObject) aspo;
+                SQLDatabase db = SQLPowerUtils.getAncestor(so, SQLDatabase.class);
+                if (db != null && !db.isPlayPenDatabase()) {
+                    databasesToRefresh.add(db);
+                }
+        	}
         }
         
         if (databasesToRefresh.isEmpty()) {
