@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
+import ca.sqlpower.sql.CachedRowSet;
 import ca.sqlpower.sql.SQL;
 import ca.sqlpower.sqlobject.DuplicateColumnException;
 import ca.sqlpower.sqlobject.SQLColumn;
@@ -154,5 +155,11 @@ public class GenericDatabaseMeta implements DatabaseMeta {
             }
         }
     }
+
+	@Override
+	public ResultSet fetchExportedKeysAcrossSchemas(DatabaseMetaData dbmd,
+			String catalog, String schema, String table) throws SQLException {
+		return new CachedRowSet();
+	}
 
 }

@@ -46,8 +46,11 @@ import ca.sqlpower.object.annotation.ConstructorParameter.ParameterType;
 import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
+import ca.sqlpower.sql.CachedAppendableRowSet;
 import ca.sqlpower.sql.CachedRowSet;
 import ca.sqlpower.sqlobject.SQLIndex.Column;
+import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
+import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
 import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.SessionNotFoundException;
@@ -727,7 +730,7 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 		if (!db.isPopulated()) {
 			throw new SQLObjectException("relationship.unpopulatedTargetDatabase");
 		}
-		CachedRowSet crs = new CachedRowSet();
+		CachedAppendableRowSet crs = new CachedAppendableRowSet();
 		ResultSet tempRS = null; // just a temporary place for the live result set. use crs instead.
 		Connection con = null;
 		try {
@@ -737,6 +740,8 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
                         			      table.getSchemaName(),
                         			      table.getName());
             crs.populate(tempRS);
+	        DatabaseMeta dm = DatabaseMetaFactory.creator(dbmd.getDatabaseProductName());
+	        crs.append(dm.fetchExportedKeysAcrossSchemas(dbmd, table.getCatalogName(), table.getSchemaName(), table.getName()));
 		} catch (SQLException e) {
 		    throw new SQLObjectException("relationship.populate", e);
 		} finally {
@@ -1865,7 +1870,6 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 			return fkColName;
 		}
 
-        //TODO
         @NonProperty @Override
         public String getNodeTitle(RenderType type){
             if (pkColumn == null || fkColumn == null) return "Incomplete mapping";
@@ -1873,6 +1877,10 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
             title.append(pkColumn.getTitleByRenderType(type));
             title.append(" - ");
             if (fkColumn != null && fkColumn.getParent() != null){
+            	if (pkColumn.getParent() != null && pkColumn.getParent().getParent() != fkColumn.getParent().getParent()){
+            		title.append(fkColumn.getParent().getParent().getNodeTitle(type));
+            		title.append(".");
+            	}
                 title.append(fkColumn.getParent().getTitleByRenderType(type));
             } else if ( fkTable != null ){
                 title.append(fkTable.getTitleByRenderType(type));
