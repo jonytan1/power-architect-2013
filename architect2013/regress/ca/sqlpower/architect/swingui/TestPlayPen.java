@@ -162,7 +162,7 @@ public class TestPlayPen extends TestCase {
 		assertEquals("Expected two relationships in pp", 1, relCount); //changed from 2 to 1
 		assertEquals("Found junk in playpen", 0, otherCount);
 
-		TablePane importedChild = pp.findTablePaneByName("child");
+		TablePane importedChild = pp.findTablePaneByName(SQLDatabase.defaultSchemaName, "child");
 		assertEquals("Incorrect reference count on imported child col",
 				2, importedChild.getModel().getColumn(0).getReferenceCount()); //changed from 3 to 2
 	}

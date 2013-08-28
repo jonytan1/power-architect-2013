@@ -1181,11 +1181,12 @@ public class PlayPen extends JPanel
 	 * <code>name</code>, or <code>null</code> if no such TablePane is
 	 * in the play pen.
 	 */
-	public TablePane findTablePaneByName(String name) {
+	public TablePane findTablePaneByName(String schemaName, String name) {
 		name = name.toLowerCase();
 		for (PlayPenComponent c : contentPane.getChildren()) {			
 			if (c instanceof TablePane
-				&& ((TablePane) c).getModel().getName().toLowerCase().equals(name)) {
+				&& ((TablePane) c).getModel().getName().toLowerCase().equals(name)
+				&& ((TablePane) c).getModel().getSchemaName().toLowerCase().equals(schemaName)) {
 				return (TablePane) c;
 			}
 		}
@@ -1371,16 +1372,16 @@ public class PlayPen extends JPanel
             
             if(!isAlreadyOnPlaypen) {
                 if (isPrimaryKeyTableNew){
-                    tablePane =findTablePaneByName(r.getFkTable().getName());
+                    tablePane =findTablePaneByName(r.getFkTable().getParent().getName(), r.getFkTable().getName());
                 } else {
-                    tablePane =findTablePaneByName(r.getPkTable().getName());
+                    tablePane =findTablePaneByName(r.getPkTable().getParent().getName(), r.getPkTable().getName());
                 }
             }
             else {
                 if (isPrimaryKeyTableNew){
-                    tablePane =findTablePaneByName(r.getFkTable().getName()+"_"+suffix); //$NON-NLS-1$
+                    tablePane =findTablePaneByName(r.getFkTable().getParent().getName(), r.getFkTable().getName()+"_"+suffix); //$NON-NLS-1$
                 } else {
-                    tablePane =findTablePaneByName(r.getPkTable().getName()+"_"+suffix); //$NON-NLS-1$
+                    tablePane =findTablePaneByName(r.getPkTable().getParent().getName(), r.getPkTable().getName()+"_"+suffix); //$NON-NLS-1$
                 }
             }
 
