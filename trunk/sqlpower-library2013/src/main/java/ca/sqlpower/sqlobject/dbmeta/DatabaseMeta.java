@@ -18,6 +18,7 @@
 package ca.sqlpower.sqlobject.dbmeta;
 
 import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -56,5 +57,18 @@ public interface DatabaseMeta {
             String table,
             DatabaseMetaData dbmd) 
                     throws SQLException, DuplicateColumnException, SQLObjectException;
+    
+    /**
+     * fetch exportedKeys which across schemas.
+     * Some DB don't support to fetch these exportedKeys by {@link DatabaseMetaData.getExportedKeys},
+     * for example MySQL.
+     * @param dbmd
+     * @param catalog
+     * @param schema
+     * @param table
+     * @return
+     */
+    public ResultSet fetchExportedKeysAcrossSchemas(DatabaseMetaData dbmd,
+    		String catalog, String schema, String table) throws SQLException;
     
 }
