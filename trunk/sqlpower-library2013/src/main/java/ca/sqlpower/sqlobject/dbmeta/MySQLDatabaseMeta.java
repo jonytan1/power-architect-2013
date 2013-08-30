@@ -92,7 +92,26 @@ public class MySQLDatabaseMeta extends GenericDatabaseMeta  {
 
 	@Override
 	public ResultSet fetchExportedKeysAcrossSchemas(DatabaseMetaData dbmd,
-			String catalog, String schema, String table) throws SQLException {
+			String catalog, String schema, String table, CachedRowSet crs) throws SQLException {
+        boolean needExtraFKAcrossSchema = true;
+        for (Object[] row : crs.getData()){
+        	String pkCatalog = (String)row[0];
+        	String fkCatalog = (String)row[4];
+        	if (pkCatalog==null){
+        		if (fkCatalog == null) continue;
+        		needExtraFKAcrossSchema = false;
+        		break;
+        	} else {
+        		if (!pkCatalog.equalsIgnoreCase(fkCatalog)) {
+        			needExtraFKAcrossSchema = false;
+        			break;
+        		}
+        	}
+        }
+        // When MySQL.DatabaseMetaData.getExportedKeys can get all exported FKs
+        // include across-schemas FKs, we will ignore the special process.
+		if (!needExtraFKAcrossSchema) return new CachedRowSet();
+		
 		ResultSet rs = null;
 		Statement stmt = null;
 		CachedRowSet result = new CachedRowSet();

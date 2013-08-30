@@ -741,7 +741,9 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
                         			      table.getName());
             crs.populate(tempRS);
 	        DatabaseMeta dm = DatabaseMetaFactory.creator(dbmd.getDatabaseProductName());
-	        crs.append(dm.fetchExportedKeysAcrossSchemas(dbmd, table.getCatalogName(), table.getSchemaName(), table.getName()));
+	        crs.append(dm.fetchExportedKeysAcrossSchemas(dbmd,
+	        		table.getCatalogName(), table.getSchemaName(), 
+	        		table.getName(), crs));
 		} catch (SQLException e) {
 		    throw new SQLObjectException("relationship.populate", e);
 		} finally {

@@ -24,6 +24,7 @@ import java.util.List;
 
 import com.google.common.collect.ListMultimap;
 
+import ca.sqlpower.sql.CachedRowSet;
 import ca.sqlpower.sqlobject.DuplicateColumnException;
 import ca.sqlpower.sqlobject.SQLColumn;
 import ca.sqlpower.sqlobject.SQLObjectException;
@@ -66,9 +67,10 @@ public interface DatabaseMeta {
      * @param catalog
      * @param schema
      * @param table
+     * @param crs  include the all exported FKs from {@link DatabaseMetaData.getExportedKeys}.
      * @return
      */
     public ResultSet fetchExportedKeysAcrossSchemas(DatabaseMetaData dbmd,
-    		String catalog, String schema, String table) throws SQLException;
+    		String catalog, String schema, String table, CachedRowSet crs) throws SQLException;
     
 }

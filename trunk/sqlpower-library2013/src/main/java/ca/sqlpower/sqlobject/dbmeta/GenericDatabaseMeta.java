@@ -158,7 +158,7 @@ public class GenericDatabaseMeta implements DatabaseMeta {
 
 	@Override
 	public ResultSet fetchExportedKeysAcrossSchemas(DatabaseMetaData dbmd,
-			String catalog, String schema, String table) throws SQLException {
+			String catalog, String schema, String table, CachedRowSet crs) throws SQLException {
 		return new CachedRowSet();
 	}
 
