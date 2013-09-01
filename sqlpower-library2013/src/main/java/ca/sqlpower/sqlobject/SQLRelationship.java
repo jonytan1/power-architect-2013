@@ -579,7 +579,7 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 		boolean alreadyExists = false;
 		
 		for (SQLRelationship r : getParent().getExportedKeysWithoutPopulating()) {
-		    if (r.getFkTable().equals(fkTable)) {
+		    if (fkTable.equals(r.getFkTable())) {
 		        alreadyExists = true;
 		        break;
 		    }
@@ -837,7 +837,10 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 								throw new SQLObjectException("relationship.populate.nullPkColumn");
 							}
 							
-							m.fkColumn = relToModify.getFkTable().getColumnByName(fkColName, false, false);
+							SQLTable fkTable = relToModify.getFkTable();
+							if (fkTable != null) {
+								m.fkColumn = fkTable.getColumnByName(fkColName, false, false);
+							}
 							if (m.fkColumn == null) {
 								m.setFkColName(fkColName);
 								m.setFkTable(relToModify.getFkTable());
@@ -1878,7 +1881,7 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
             StringBuffer title = new StringBuffer();
             title.append(pkColumn.getTitleByRenderType(type));
             title.append(" - ");
-            if (fkColumn != null && fkColumn.getParent() != null){
+            if (fkColumn.getParent() != null){
             	if (pkColumn.getParent() != null && pkColumn.getParent().getParent() != fkColumn.getParent().getParent()){
             		title.append(fkColumn.getParent().getParent().getNodeTitle(type));
             		title.append(".");
