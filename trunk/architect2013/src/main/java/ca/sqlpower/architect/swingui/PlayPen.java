@@ -1361,6 +1361,9 @@ public class PlayPen extends JPanel
 		while (sourceKeys.hasNext()) {
 			SQLRelationship r = sourceKeys.next();
 			
+			// If relationship is incomplete, then ignore it.
+			if (r.getFkTable() == null) continue;
+			
 			// If relationship is self-referencing, then don't add it twice.
 			if (r.getFkTable().equals(r.getPkTable()) && !isPrimaryKeyTableNew) continue;
 			
