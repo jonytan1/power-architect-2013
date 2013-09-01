@@ -43,12 +43,14 @@ import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sql.CachedRowSet;
 import ca.sqlpower.sqlobject.SQLIndex.Column;
+import ca.sqlpower.sqlobject.SQLRelationship.ColumnMapping;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
 import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.SessionNotFoundException;
+import ca.sqlpower.util.StringUtil;
 
 import com.google.common.collect.ListMultimap;
 
@@ -656,6 +658,7 @@ public class SQLTable extends SQLObject {
 						String cat = crs.getString(1);
 						String sch = crs.getString(2);
 						String tab = crs.getString(3);
+						String col = crs.getString(4);
 						SQLTable pkTable = getParentDatabase().getTableByName(cat, sch, tab);
 						if (pkTable == null) {
 							throw new IllegalStateException("While populating table " +
@@ -666,6 +669,28 @@ public class SQLTable extends SQLObject {
 						pkTable.populateColumns();
 						pkTable.populateIndices();
 						pkTable.populateRelationships(this);
+						
+						//Complete the incomplete relation (must be across-schemas relation).
+						String fkCat = crs.getString(5);
+						String fkSch = crs.getString(6);
+						String fkColName = crs.getString(8);
+						String constraintName = crs.getString(12);
+						if (!StringUtil.equals(cat, fkCat) || !StringUtil.equals(sch, fkSch)){
+							for (SQLRelationship r : pkTable.getExportedKeys()){
+								if (constraintName.equalsIgnoreCase(r.getName())){
+									ColumnMapping m = r.getMappingByPkCol(pkTable.getColumnByName(col));
+									
+									if (m.getFkColumn() == null && fkColName.equalsIgnoreCase(m.getFkColName())){
+										SQLColumn fkCol = this.getColumnByName(fkColName);
+										SQLImportedKey importKey = r.getForeignKey();
+										m.setFkColumn(fkCol);
+										if (!this.importedKeys.contains(importKey)){
+											this.addImportedKey(importKey);
+										}
+									}
+								}
+							}
+						}
 					}
 					setImportedKeysPopulated(true);
 				} catch (SQLException ex) {
@@ -790,8 +815,9 @@ public class SQLTable extends SQLObject {
                 //This if is for backwards compatibility
             	addMe.getParent().exportedKeys.add(addMe);
             	if (addMe.getPkTable().isMagicEnabled()) {
-            		if (!addMe.getFkTable().getImportedKeysWithoutPopulating().contains(addMe.getForeignKey())) {
-            			addMe.getFkTable().importedKeys.add(addMe.getForeignKey());
+            		SQLTable fkTable = addMe.getFkTable();
+            		if (fkTable != null && !fkTable.getImportedKeysWithoutPopulating().contains(addMe.getForeignKey())) {
+            			fkTable.importedKeys.add(addMe.getForeignKey());
             			relsAdded.add(addMe);
             		}
             	}
