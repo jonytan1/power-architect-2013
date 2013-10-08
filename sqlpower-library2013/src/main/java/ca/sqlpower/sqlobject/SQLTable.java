@@ -47,7 +47,6 @@ import ca.sqlpower.sqlobject.SQLRelationship.ColumnMapping;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
-import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.SessionNotFoundException;
 import ca.sqlpower.util.StringUtil;
@@ -81,7 +80,7 @@ public class SQLTable extends SQLObject {
 
 	protected String remarks="";
 	private String objectType;
-
+	
 	/**
 	 * A List of SQLColumn objects which make up all the columns of
 	 * this table.
@@ -293,8 +292,8 @@ public class SQLTable extends SQLObject {
 	 * @throws SQLObjectException if there are populate problems on source or parent
 	 * Or if the parent has children of type other than SQLTable.
 	 */
-	public SQLTable createInheritingInstance(SQLDatabase parent) throws SQLObjectException {
-		return createTableFromSource(parent, TransferStyles.REVERSE_ENGINEER, false);
+	public SQLTable createInheritingInstance(SQLSchema schemaParent) throws SQLObjectException {
+		return createTableFromSource(schemaParent, TransferStyles.REVERSE_ENGINEER, false);
 	}
 	
 	/**
@@ -303,17 +302,15 @@ public class SQLTable extends SQLObject {
 	 * @throws SQLObjectException if there are populate problems on source or parent
 	 * Or if the parent has children of type other than SQLTable.
 	 */
-	private SQLTable createTableFromSource(SQLDatabase parent, TransferStyles transferStyle, boolean preserveColumnSource)
+	private SQLTable createTableFromSource(SQLSchema schemaParent, TransferStyles transferStyle, boolean preserveColumnSource)
 		throws SQLObjectException {
 		populateColumns();
 		populateIndices();
 		populateRelationships();
 		populateImportedKeys();
         SQLIndex newPKIndex = new SQLIndex();
-        SQLObject actualParent = parent;
-        if ( parent.isPlayPenDatabase() ) actualParent = parent.getPlayPenSchema(this.getParent().getName());
 
-        SQLTable t = new SQLTable(actualParent, getName(), remarks, "TABLE", true, newPKIndex);
+        SQLTable t = new SQLTable(schemaParent, getName(), remarks, "TABLE", true, newPKIndex);
 		for (Map.Entry<Class<? extends SQLObject>, Throwable> inaccessibleReason : getChildrenInaccessibleReasons().entrySet()) {
         	t.setChildrenInaccessibleReason(inaccessibleReason.getValue(), inaccessibleReason.getKey(), false);
         }
@@ -321,7 +318,7 @@ public class SQLTable extends SQLObject {
 		t.inherit(this, transferStyle, preserveColumnSource);
         inheritIndices(this, t);
         
-        actualParent.addChild(t);
+        schemaParent.addChild(t);
 		return t;
 	}
 	
@@ -334,9 +331,9 @@ public class SQLTable extends SQLObject {
 	 * @throws SQLObjectException if there are populate problems on source or parent
 	 * Or if the parent has children of type other than SQLTable.
 	 */
-	public SQLTable createCopy(SQLDatabase parent, boolean preserveColumnSource)
+	public SQLTable createCopy(SQLSchema schemaParent, boolean preserveColumnSource)
 		throws SQLObjectException {
-		return createTableFromSource(parent, TransferStyles.COPY, preserveColumnSource);
+		return createTableFromSource(schemaParent, TransferStyles.COPY, preserveColumnSource);
 	}
 
 	/**
@@ -2117,6 +2114,7 @@ public class SQLTable extends SQLObject {
 	 * classes outside of the SQLObjects do not need to call this method.
 	 */
 	void removeNotify() {
+	    if (isMovingToAnotherParent) return;
 		for (int i = exportedKeys.size() - 1; i >= 0; i--) {
 			exportedKeys.get(i).tableDisconnected();
 		}
@@ -2224,8 +2222,7 @@ public class SQLTable extends SQLObject {
      * Get the selected schema name after editing the table's properties.
      * @return
      */
-    @NonProperty
-    public String getPlayPenSchemaName(){
+    public String findPlayPenSchemaName(){
         return playPenSchemaName;
     }
 
@@ -2233,39 +2230,76 @@ public class SQLTable extends SQLObject {
      * Remain the selected schema name after editing the table's properties.
      * @param newSchema
      */
-    @NonProperty
-    public void setPlayPenSchemaName(String playPenSchemaName){
-        this.firePropertyChange("playPenSchemaName", this.playPenSchemaName, playPenSchemaName);
+    public void configPlayPenSchemaName(String playPenSchemaName){
         this.playPenSchemaName = playPenSchemaName;
     }
 
+    public void changeSchemaParent(SQLObject newParent) {
+        try {
+            setMovingToAnotherSchema(true);
+            setSchemaParent(newParent);
+        } finally {
+            setMovingToAnotherSchema(false);
+        }
+    }
+    
+    @Transient @Accessor
+    public SQLObject getSchemaParent() {
+        return this.getParent();
+    }
+    
     /**
-     * The table moved under a new schema of playPenDatabase.
-     * @param newSchema
+     * The table moved from its old parent to a new schema of playPenDatabase.
+     * @param newParent
      */
-    public void moveToAnotherSchema( SQLSchema newSchema ){
-        this.setPlayPenSchemaName(newSchema == null ? null : newSchema.getName());
+    @Transient @Mutator
+    public void setSchemaParent(SQLObject newParent) {
+        this.configPlayPenSchemaName(newParent == null ? null : newParent.getName());
         
         SQLDatabase playPenDB = this.getParentDatabase();
         //When the table is new, it is not under playPenDatabase. So playPenDB == null;
         if (playPenDB == null) return;
         
         if (playPenDB.isPlayPenDatabase()){
-            SQLObject parent = this.getParent();
-            if ( parent != newSchema ){
+            if ( this.getParent() != newParent ){
                 try {
-                    if ( parent != null && parent instanceof SQLSchema ){
-                        ( ( SQLSchema ) parent).removeTableAndWaiting(this);
+                    SQLObject oldParent = this.getParent();
+                    if (oldParent != null) {
+                        oldParent.removeChild(this);
                     }
-                    if ( newSchema != null ) {
-                        newSchema.addChild(this);
+                    if (newParent != null) {
+                        newParent.addChild(this);
                     }
+                    firePropertyChange("schemaParent", oldParent, newParent);
                 } catch (IllegalArgumentException e) {
                     logger.debug(e.toString());
                 } catch (SQLObjectException e) {
                     logger.debug(e.toString());
+                } catch (ObjectDependentException e) {
+                    logger.debug(e.toString());
                 }
             }
         }
+    }
+    
+    /**
+     * Check whether now is in the process of setting this table's schemaParent.
+     * @return
+     */
+    @Transient @Accessor
+    public boolean isMovingToAnotherSchema() {
+        return isMovingToAnotherParent;
+    }
+
+    /**
+     * To be called only by {@link changeSchemaParent} and undo/re-do operation.
+     * In other cases, it do not suggest to use this method.
+     * @return
+     */
+    @Transient @Mutator
+    public void setMovingToAnotherSchema(boolean moving) {
+        boolean old = this.isMovingToAnotherParent;
+        this.isMovingToAnotherParent = moving;
+        firePropertyChange("movingToAnotherSchema", old, this.isMovingToAnotherParent);
     }
 }

@@ -38,6 +38,7 @@ import ca.sqlpower.object.annotation.NonBound;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Persistable;
 import ca.sqlpower.object.annotation.Transient;
+import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.util.RunnableDispatcher;
 import ca.sqlpower.util.SessionNotFoundException;
 import ca.sqlpower.util.TransactionEvent;
@@ -66,7 +67,16 @@ public abstract class AbstractSPObject implements SPObject {
 	 */
 	private int magicDisableCount = 0;
 	
-	@Constructor
+    /**
+     * When this table is removed  from PlayPen, then isMovingToAnotherParent = false;<br>
+     * When this table is removed from one schema to another schema, then isMovingToAnotherParent = true;<br>
+     * <br>
+     * See also : {@link SQLTable#removeNotify()}, {@link SQLTable#changeSchemaParent(SQLObject)},
+     * {@link SQLTable#isMovingToAnotherSchema}
+     */
+    protected boolean isMovingToAnotherParent = false;
+
+    @Constructor
 	public AbstractSPObject() {
 		this(null);
 	}
@@ -257,6 +267,7 @@ public abstract class AbstractSPObject implements SPObject {
 	public void setParent(SPObject parent) {
 		SPObject oldParent = this.parent;
 		this.parent = parent;
+		if (isMovingToAnotherParent) return;
 		firePropertyChange("parent", oldParent, parent);
 	}
 

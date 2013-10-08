@@ -47,11 +47,9 @@ import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sql.CachedAppendableRowSet;
-import ca.sqlpower.sql.CachedRowSet;
 import ca.sqlpower.sqlobject.SQLIndex.Column;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMeta;
 import ca.sqlpower.sqlobject.dbmeta.DatabaseMetaFactory;
-import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.SessionNotFoundException;
 
@@ -108,6 +106,11 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
      * different way.
      */
     private SQLImportedKey foreignKey;
+    
+    /**
+     * Valid only when foreignKey.getParent() is null.
+     */
+    private String fkSchemaName = null;
 
     /**
      * The enumeration of all referential integrity constraint checking
@@ -794,6 +797,7 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 					final SQLRelationship finalRelation = r;
 					Runnable fkTableRunner = new Runnable() {
 						public void run() {
+						    finalRelation.setFkSchemaName(fkSchema);
 							finalRelation.setFkTable(fkTable);
 						}
 					};
@@ -2055,5 +2059,44 @@ public class SQLRelationship extends SQLObject implements java.io.Serializable {
 
 	public List<Class<? extends SPObject>> getAllowedChildTypes() {
 		return allowedChildTypes;
+	}
+	
+	@NonProperty
+	public boolean isAcrossedSchema() {
+	    SQLTable t = this.getFkTable();
+	    if (t != null) {
+	        return (this.getPkTable().getParent() != t.getParent());
+	    }
+	    if (fkSchemaName == null || "".equals(fkSchemaName.trim()) 
+	            || "".equals(this.getPkTable().getSchemaName().trim())) {
+	        return true;
+	    }
+	    return !this.getPkTable().getSchemaName().equalsIgnoreCase(fkSchemaName);
+	}
+	
+	/**
+	 * Find the SQLSchema of pkTable / fkTable.
+	 * @param isPk
+	 * @return maybe null when the SQLRelation is not completed(for example: the fkTable is null.
+	 */
+    @NonProperty
+    public SQLSchema getSchema(boolean isPk) {
+        SQLTable t = (isPk ? this.getPkTable() : this.getFkTable());
+        return (t == null ? null : SQLPowerUtils.getAncestor(t, SQLSchema.class));
+    }
+
+    /**
+     * Get the schema name of fkTable. It is useful when fkTable is null.
+     * @return
+     */
+    @NonProperty
+	public String getFkSchemaName() {
+	    SQLTable t = this.getFkTable();
+	    return (t == null ? fkSchemaName : t.getSchemaName());
+	}
+	
+	@NonProperty
+	private void setFkSchemaName(String fkSchemaName) {
+	    this.fkSchemaName = fkSchemaName;
 	}
 }

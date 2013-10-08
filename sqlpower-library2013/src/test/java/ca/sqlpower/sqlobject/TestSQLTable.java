@@ -113,7 +113,7 @@ public class TestSQLTable extends BaseSQLObjectTestCase {
         pp.setPlayPenDatabase(true);
         pp.setParent(new StubSQLObject());
         assertNotNull(table1 = db.getTableByName("REGRESSION_TEST1"));
-        derivedTable = table1.createInheritingInstance(pp);
+        derivedTable = table1.createInheritingInstance(pp.getDefaultSchema());
         
         TreeMap<String, Object> derivedPropertyMap = new TreeMap<String, Object>(BeanUtils.describe(derivedTable));
         TreeMap<String, Object> table1PropertyMap = new TreeMap<String, Object>(BeanUtils.describe(table1));
