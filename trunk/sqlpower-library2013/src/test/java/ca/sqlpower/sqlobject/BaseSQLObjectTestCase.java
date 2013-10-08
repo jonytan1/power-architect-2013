@@ -127,6 +127,9 @@ public abstract class BaseSQLObjectTestCase extends PersistedSPObjectTest {
         propertiesToIgnoreForEventGeneration.add("columnsPopulated");
         propertiesToIgnoreForEventGeneration.add("indicesPopulated");
 		
+        // Ignored because of special process for SQLTable.
+        propertiesToIgnoreForEventGeneration.add("schemaParent");
+
         CountingSQLObjectListener listener = new CountingSQLObjectListener();
         SQLPowerUtils.listenToHierarchy(so, listener);
         
@@ -313,7 +316,10 @@ public abstract class BaseSQLObjectTestCase extends PersistedSPObjectTest {
         propertiesToIgnoreForUndo.add("runnableDispatcher");
         propertiesToIgnoreForUndo.add("foregroundThread");
 
-		if(so instanceof SQLDatabase)
+        // Ignored because of special process for SQLTable.
+        propertiesToIgnoreForUndo.add("schemaParent");
+
+        if(so instanceof SQLDatabase)
 		{
 			// should be handled in the Datasource
 			propertiesToIgnoreForUndo.add("name");
