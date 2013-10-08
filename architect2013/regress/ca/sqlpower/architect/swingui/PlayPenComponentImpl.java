@@ -43,7 +43,7 @@ public class PlayPenComponentImpl extends PlayPenComponent {
 	}
 
 	@Override
-	public Object getModel() {
+	public SPObject getModel() {
 		return null;
 	}
 	

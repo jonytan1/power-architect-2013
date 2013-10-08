@@ -48,6 +48,9 @@ import ca.sqlpower.object.annotation.NonBound;
 import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sqlobject.SQLDatabase;
+import ca.sqlpower.sqlobject.SQLRelationship;
+import ca.sqlpower.sqlobject.SQLSchema;
+import ca.sqlpower.util.SQLPowerUtils;
 
 public class PlayPenContentPane extends AbstractSPObject {
     private static final Logger logger = Logger.getLogger(PlayPenContentPane.class);
@@ -277,6 +280,10 @@ public class PlayPenContentPane extends AbstractSPObject {
 
     protected void addChildImpl(SPObject child, int pos) {
         PlayPenComponent ppc = (PlayPenComponent) child;
+        if (ppc instanceof TablePane) {
+            if (((TablePane)ppc).isMovingToAnotherSchema()) return;
+        }
+
         if (dependentComponentTypes.contains(ppc.getClass())) {
             dependentComponents.add(pos - components.size(), ppc);
         } else {
@@ -297,6 +304,10 @@ public class PlayPenContentPane extends AbstractSPObject {
 
     @Override
     protected boolean removeChildImpl(SPObject child) {
+        if (child instanceof TablePane) {
+            if (((TablePane)child).isMovingToAnotherSchema()) return false;
+        }
+
         int index = getChildren().indexOf(child);
         boolean removed;
         if (dependentComponentTypes.contains(child.getClass())) {
@@ -313,7 +324,7 @@ public class PlayPenContentPane extends AbstractSPObject {
         }
         child.removeSPListener(componentBoundChanges);
         if (playPen != null) {
-            playPen.repaint();
+            playPen.repaintCurrentSchema();
         }
         return true;
     }
@@ -477,5 +488,65 @@ public class PlayPenContentPane extends AbstractSPObject {
     @Transient @Accessor
     public ModelBadge getBadge(Object subject) {
         return badges.get(subject);
+    }
+    
+    /**
+     * Get all PlayPenComponents that display in this tab schema pane.
+     * @param schema
+     * @return
+     */
+    @NonProperty
+    public List<? extends PlayPenComponent> getChildrenOfSchema(SQLSchema schema){
+    	List<PlayPenComponent> children = new ArrayList<PlayPenComponent>();
+    	for (PlayPenComponent c : getChildren()) {
+    		SQLSchema sch = SQLPowerUtils.getAncestor(c.getModel(), SQLSchema.class);
+    		if (schema != null && sch != null && schema.equals(sch)) {
+    			children.add(c);
+            } else if (schema != null && c instanceof Relationship){
+                if (((Relationship)c).sameFkSchema(schema)) {
+                    children.add(c);
+                }
+    		}
+    	}
+    	return Collections.unmodifiableList(children);
+    }
+
+    /**
+     * Get all PlayPenComponents of class type that display in this tab schema pane.
+     * @param schema
+     * @param type
+     * @return
+     */
+    @NonProperty
+    public <T extends SPObject> List<T> getChildrenOfSchema(SQLSchema schema, Class<T> type){
+    	List<T> children = new ArrayList<T>();
+    	for (T c : super.getChildren(type)) {
+    		SPObject so = ((c instanceof PlayPenComponent) ? ((PlayPenComponent)c).getModel() : c);
+    		SQLSchema sch = SQLPowerUtils.getAncestor(so, SQLSchema.class);
+    		if (schema != null && sch != null && schema.equals(sch)) {
+    			children.add(c);
+            } else if (schema != null && c instanceof Relationship){
+                if (((Relationship)c).sameFkSchema(schema)) {
+                    children.add(c);
+                }
+    		}
+    	}
+    	return Collections.unmodifiableList(children);
+    }
+    
+    @NonProperty
+    public List<? extends PlayPenComponent> getAllChildrenOfSchema(SQLSchema schema) {
+    	List<PlayPenComponent> children = new ArrayList<PlayPenComponent>();
+    	for (PlayPenComponent c : this.getAllChildren()) {
+    		SQLSchema sch = SQLPowerUtils.getAncestor(c.getModel(), SQLSchema.class);
+            if (schema != null && sch != null && schema.equals(sch)) {
+                children.add(c);
+            } else if (schema != null && c instanceof Relationship){
+                if (((Relationship)c).sameFkSchema(schema)) {
+                    children.add(c);
+                }
+            }
+    	}
+    	return Collections.unmodifiableList(children);
     }
 }

@@ -149,7 +149,7 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
     		rounded.setSelected(tablePane.isRounded());
 		}
 		SQLObject parent = t.getParent();
-		t.setPlayPenSchemaName(parent == null ? null : parent.getPhysicalName());
+		t.configPlayPenSchemaName(parent == null ? null : parent.getPhysicalName());
 		if ( parent != null ){
 			if (parent instanceof SQLSchema ){
 				playPenSchema.setSelectedItem(parent);
@@ -179,7 +179,7 @@ public class TableEditPanel extends ChangeListeningDataEntryPanel {
 	        table.setName(logicalName.getText());
 	        table.setRemarks(remarks.getText());   
 
-	        table.moveToAnotherSchema((SQLSchema) playPenSchema.getSelectedItem());
+	        table.changeSchemaParent((SQLSchema) playPenSchema.getSelectedItem());
 	        
 	        if (tablePane != null) {
 	            tablePane.begin("TableEditPanel.compoundEditName");

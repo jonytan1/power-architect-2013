@@ -69,6 +69,7 @@ import ca.sqlpower.object.annotation.Constructor;
 import ca.sqlpower.object.annotation.ConstructorParameter;
 import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonBound;
+import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sql.DataSourceCollection;
 import ca.sqlpower.sql.SPDataSource;
@@ -83,6 +84,7 @@ import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.swingui.ColorIcon;
 import ca.sqlpower.swingui.ColourScheme;
 import ca.sqlpower.swingui.SPSUtils;
+import ca.sqlpower.swingui.dbtree.DBTreeNodeRenderUtils;
 import ca.sqlpower.swingui.dbtree.SQLObjectSelection;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.TransactionEvent;
@@ -90,7 +92,7 @@ import ca.sqlpower.util.TransactionEvent;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
-public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
+public class TablePane extends ContainerPane<SQLTable, SQLColumn> implements RelationshipConnectible {
 
 	private static final Logger logger = Logger.getLogger(TablePane.class);
 	
@@ -110,6 +112,13 @@ public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
      * A special column index that represents the gap between the PK line and the first non-PK column.
      */
     public static final int COLUMN_INDEX_START_OF_NON_PK = -4;
+    
+    /**
+     * Whether the related SQLTable is moving from one schema to another schema.<br>
+     * Not add to one schema or remove from one schema.<br>
+     * Decoupling this property from tablePane's Model.
+     */
+    private boolean movingToAnotherSchema = false;
     
     /**
      * This listener will disconnect this pane from the model if the pane is removed from the
@@ -141,6 +150,11 @@ public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
 	 * physical names.
 	 */
 	boolean usingLogicalNames;
+	
+	/**
+	 * Whether or not to show the schema name on title of table pane.
+	 */
+	boolean showSchema = false;
 
 	/**
 	 * Tracks current highlight colours of the columns in this table.
@@ -173,6 +187,7 @@ public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
 		this.draggingColumn = tp.draggingColumn;
 		this.topLeftCorner = new Point(tp.topLeftCorner);
 		this.selected = false;
+		this.showSchema = tp.showSchema;
 
 		this.hiddenColumns = new HashSet<SQLColumn>(tp.getHiddenColumns());
 		
@@ -195,14 +210,19 @@ public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
     @Constructor
 	public TablePane(@ConstructorParameter(propertyName="model") SQLTable m, 
 	        @ConstructorParameter(propertyName="parent") PlayPenContentPane parent) {
+        this(m, parent, false);
+	}
+	
+    public TablePane(SQLTable m, PlayPenContentPane parent, boolean showSchema) {
         super(m.getName());
+        this.showSchema = showSchema;
         setParent(parent);
         setModel(m);
         this.hiddenColumns = new HashSet<SQLColumn>();
-        setInsertionPoint(ITEM_INDEX_NONE);	    
-		updateUI();
-	}
-	
+        setInsertionPoint(ITEM_INDEX_NONE);     
+        updateUI();
+    }
+    
 	@Override
 	protected List<SQLColumn> getItems() {
 	    try {
@@ -360,10 +380,15 @@ public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
                         " oldVal="+e.getOldValue()+" newVal="+e.getNewValue() +  //$NON-NLS-1$ //$NON-NLS-2$
                         " selectedItems=" + getSelectedItems());
             }
-            updateHiddenColumns();
-            firePropertyChange("model."+e.getPropertyName(), e.getOldValue(), e.getNewValue()); //$NON-NLS-1$
-            setLengths(getUI().getPreferredSize());
-            repaint();
+            if ("movingToAnotherSchema".equals(e.getPropertyName())) {
+                TablePane.this.movingToAnotherSchema = (Boolean)e.getNewValue();
+                firePropertyChange("model.movingToAnotherSchema", e.getOldValue(), e.getNewValue()); //$NON-NLS-1$
+            } else if (!"parent".equals(e.getPropertyName())) {
+                updateHiddenColumns();
+                firePropertyChange("model."+e.getPropertyName(), e.getOldValue(), e.getNewValue()); //$NON-NLS-1$
+                setLengths(getUI().getPreferredSize());
+                repaint();
+            }
         }
 
         public void transactionEnded(TransactionEvent e) {
@@ -1268,9 +1293,11 @@ public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
         pp.unzoomPoint(p);
         p.translate(-getX(), -getY());
         if (evt.getID() == MouseEvent.MOUSE_CLICKED) {
+            logger.debug("handleMouseEvent --- MOUSE_CLICKED!");
             if ((evt.getModifiers() & MouseEvent.BUTTON1_MASK) != 0) {
                 int selectedColIndex = pointToItemIndex(p);
                 if (evt.getClickCount() == 2) { // double click
+                    logger.debug("handleMouseEvent --- Double MOUSE_CLICKED!");
                     if (isSelected()) {
                         ArchitectFrame af = pp.getSession().getArchitectFrame();
                         if (selectedColIndex == ITEM_INDEX_TITLE) {
@@ -1292,5 +1319,16 @@ public class TablePane extends ContainerPane<SQLTable, SQLColumn> {
         } else {
             return new SQLObjectSelection(new ArrayList<SQLObject>(getSelectedItems()));
         }
+    }
+    
+    public String getTitleOfPane() {
+        String s = this.getModel().getTitleByRenderType(
+                DBTreeNodeRenderUtils.getRenderType(isUsingLogicalNames()));
+        return (this.showSchema ? this.getModel().getParent().getName() + "."+ s : s);
+    }
+    
+    @NonProperty
+    public boolean isMovingToAnotherSchema() {
+        return this.movingToAnotherSchema;
     }
 }

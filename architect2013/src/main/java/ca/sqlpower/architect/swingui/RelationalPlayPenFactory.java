@@ -149,6 +149,14 @@ public class RelationalPlayPenFactory {
                     }
                 });
                 menu.add(mi);
+
+                mi = new JMenuItem("Refresh View"); //$NON-NLS-1$
+                mi.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent evt) {
+                        pp.repaintCurrentSchema();
+                    }
+                });
+                menu.add(mi);
             }
 
             return menu;

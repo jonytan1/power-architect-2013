@@ -37,11 +37,11 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
-import javax.swing.SwingUtilities;
 
 import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.ArchitectUtils;
+import ca.sqlpower.architect.swingui.PlayPen.ConvertTypeForPlayPen;
 import ca.sqlpower.architect.swingui.PlayPen.FloatingContainerPaneListener;
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
 import ca.sqlpower.architect.swingui.event.SelectionListener;
@@ -204,6 +204,7 @@ implements Selectable {
             final int xAdjust = 5;  // ensure menu doesn't appear directly under pointer
             p.translate(getX(), getY());
             getPlayPen().zoomPoint(p);
+            getPlayPen().convertPointForPlayPen(ConvertTypeForPlayPen.ToPlayPen, p);
             menu.show(getPlayPen(), p.x + xAdjust, p.y);
         }
     }
@@ -235,7 +236,7 @@ implements Selectable {
             Rectangle r = new Rectangle(topLeftCorner, lengths);
             if (logger.isDebugEnabled()) logger.debug("Scheduling repaint at "+r); //$NON-NLS-1$
             pp.zoomRect(r);
-            pp.repaint(r);
+            pp.repaintSchema(r);
         }
     }
     
@@ -410,7 +411,7 @@ implements Selectable {
             x2++;
             y2++;
         }
-        owner.repaint(x1, y1, (x2 - x1), (y2 - y1));
+        owner.repaintSchema(new Rectangle(x1, y1, (x2 - x1), (y2 - y1)));
     }
     
     @Accessor(isInteresting=true)
@@ -509,7 +510,7 @@ implements Selectable {
     }
 
     @Accessor(isInteresting=true)
-    public abstract Object getModel();
+    public abstract SPObject getModel();
     
     /**
      * Performs the component specific actions for the given MouseEvent. 
@@ -585,6 +586,7 @@ implements Selectable {
      * and sets up an update listener to listen for conflicts while dragging
      */
     public void startedDragging() {
+        logger.debug("startedDragging:" + this + ";isBeingDragged=" + isBeingDragged);
         if (!isBeingDragged) {
             isBeingDragged = true;
             if (getPlayPen().getSession().isEnterpriseSession()) {
@@ -606,6 +608,7 @@ implements Selectable {
      * Used by the update conflict listener to rollback the drag.
      */
     public void doneDragging(boolean ok) {
+        logger.debug("doneDragging:" + this + ";isBeingDragged=" + isBeingDragged);
         if (isBeingDragged) {
             isBeingDragged = false;
             if (ok) {
@@ -614,7 +617,7 @@ implements Selectable {
                 // We need to cleanup all of the FloatingContainerPaneListeners
                 // on the PlayPen because we no longer want to keep track
                 // of dragging.
-                for (MouseMotionListener l : getPlayPen().getMouseMotionListeners()) {
+                for (MouseMotionListener l : getPlayPen().getMouseMotionListenersFromSchema()) {
                     if (l instanceof FloatingContainerPaneListener) {
                         ((FloatingContainerPaneListener) l).cleanup();
                     }
@@ -707,7 +710,7 @@ implements Selectable {
         PlayPen pp = getPlayPen();
         getLocation(p);
         pp.zoomPoint(p);
-        SwingUtilities.convertPointToScreen(p, pp);
+        pp.convertPointToScreen(p);
         return p;
     }
 

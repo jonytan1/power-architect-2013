@@ -29,6 +29,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.MouseInfo;
 import java.awt.Point;
@@ -48,9 +49,11 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.dnd.InvalidDnDOperationException;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -58,6 +61,7 @@ import java.awt.font.FontRenderContext;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,17 +82,18 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
 import javax.swing.InputMap;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JViewport;
 import javax.swing.KeyStroke;
 import javax.swing.ProgressMonitor;
-import javax.swing.Scrollable;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.MouseInputAdapter;
 import javax.swing.tree.TreePath;
@@ -124,6 +129,7 @@ import ca.sqlpower.architect.swingui.olap.OLAPTree;
 import ca.sqlpower.architect.swingui.olap.PaneSection;
 import ca.sqlpower.architect.swingui.olap.UsageComponent;
 import ca.sqlpower.architect.swingui.olap.VirtualCubePane;
+import ca.sqlpower.object.AbstractSPListener;
 import ca.sqlpower.object.ObjectDependentException;
 import ca.sqlpower.object.SPChildEvent;
 import ca.sqlpower.object.SPListener;
@@ -145,6 +151,7 @@ import ca.sqlpower.sqlobject.SQLTable.TransferStyles;
 import ca.sqlpower.sqlobject.SQLTypePhysicalPropertiesProvider;
 import ca.sqlpower.swingui.CursorManager;
 import ca.sqlpower.swingui.ProgressWatcher;
+import ca.sqlpower.swingui.SPSUtils;
 import ca.sqlpower.swingui.SPSwingWorker;
 import ca.sqlpower.swingui.dbtree.SQLObjectSelection;
 import ca.sqlpower.util.SQLPowerUtils;
@@ -163,7 +170,7 @@ import edu.umd.cs.findbugs.annotations.SuppressWarnings;
         justification = "PlayPen is not meant to be serializable",
         value = {"SE_BAD_FIELD"})
 public class PlayPen extends JPanel
-	implements SPListener, SelectionListener, Scrollable {
+	implements SPListener, SelectionListener {
 
     public interface CancelableListener {
 
@@ -190,39 +197,47 @@ public class PlayPen extends JPanel
 	 * The cursor manager for this play pen.
 	 */
 	private final CursorManager cursorManager;
+	
+	/**
+	 * the list of schemas : one tab for one schema.
+	 */
+	private HashMap<String, TabbedSchema> schemas = new HashMap<String, TabbedSchema>();
+	
+	private HashMap<String, SQLTable> sourceTablesMapping = new HashMap<String, SQLTable>();
+	/**
+	 * JTabbedPane component for the list of schemas.
+	 */
+	JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
+	JPopupMenu tabbedPopupMenu = new JPopupMenu();
+	MouseListener tabbedPaneMouseListener = null;
+	
+    private final AbstractSPListener schemaNameListener = new AbstractSPListener() {
+        @Override
+        public void propertyChanged(PropertyChangeEvent evt) {
+            if ("name".equals(evt.getPropertyName()) && evt.getSource() instanceof SQLSchema) {
+                int index = PlayPen.this.tabbedPane.indexOfTab((String)evt.getOldValue());
+                if (index < 0) return;
+                PlayPen.this.tabbedPane.setTitleAt(index, (String)evt.getNewValue());
+            }
+        }
+    };
+	
+    public enum ConvertTypeForScreen {FromScreen,
+        ToScreen}
+    public enum ConvertTypeForPlayPen {FromPlayPen,
+        ToPlayPen}
+
+    private final ActionEvent newSchemaActionEvent = new ActionEvent(
+            this, ActionEvent.ACTION_PERFORMED,
+            PlayPen.ACTION_COMMAND_SRC_PLAYPEN);
 
 	protected void addImpl(Component c, Object constraints, int index) {
+		// one tab for one schema, so we should add the JTabbedPane Component.
+		if (c instanceof JTabbedPane) {
+			super.addImpl(c, constraints, index);
+			return;
+		}
 	    throw new UnsupportedOperationException("You can't add swing component for argument"); //$NON-NLS-1$
-	}
-
-	// --- Scrollable Methods --- //
-	public Dimension getPreferredScrollableViewportSize() {
-	    // return getPreferredSize();
-	    return new Dimension(800,600);
-	}
-
-	public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
-	    if (orientation == SwingConstants.HORIZONTAL) {
-	        return visibleRect.width;
-	    } else { // SwingConstants.VERTICAL
-	        return visibleRect.height;
-	    }
-	}
-
-	public boolean getScrollableTracksViewportHeight() {
-	    return false;
-	}
-
-	public boolean getScrollableTracksViewportWidth() {
-	    return false;
-	}
-
-	public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
-	    if (orientation == SwingConstants.HORIZONTAL) {
-	        return visibleRect.width/5;
-	    } else { // SwingConstants.VERTICAL
-	        return visibleRect.height/5;
-	    }
 	}
 
 	// -------------------------- JComponent overrides ---------------------------
@@ -239,68 +254,39 @@ public class PlayPen extends JPanel
 	 * layout manager returns a preferred size of (100,100) when asked.
 	 */
 	public Dimension getPreferredSize() {
-
-	    Dimension usedSpace = getUsedArea();
-	    Dimension vpSize = getViewportSize();
-	    Dimension ppSize = null;
-
-	    // viewport seems to never come back as null, but protect anyways...
-	    if (vpSize != null) {
-	        ppSize = new Dimension(Math.max(usedSpace.width, vpSize.width),
-	                Math.max(usedSpace.height, vpSize.height));
-	    }
-
-	    if (logger.isDebugEnabled()) {
-	        logger.debug("minsize is: " + this.getMinimumSize()); //$NON-NLS-1$
-	        logger.debug("unzoomed userDim is: " + unzoomPoint(new Point(usedSpace.width,usedSpace.height))); //$NON-NLS-1$
-	        logger.debug("zoom="+zoom+",usedSpace size is " + usedSpace); //$NON-NLS-1$ //$NON-NLS-2$
-	    }
-
-	    if (ppSize != null) {
-	        logger.debug("preferred size is ppSize (viewport size was null): " + ppSize); //$NON-NLS-1$
-	        return ppSize;
-	    } else {
-	        logger.debug("preferred size is usedSpace: " + usedSpace); //$NON-NLS-1$
-	        return usedSpace;
-	    }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			tabbedSchema.refreshViewport();
+		}
+		return new Dimension(this.getWidth(), this.getHeight());
 	}
 
 	public Dimension getUsedArea() {
-	    Rectangle cbounds = null;
-	    int minx = 0, miny = 0, maxx = 0, maxy = 0;
-	    for (PlayPenComponent c : contentPane.getChildren()) {
-	        cbounds = c.getBounds(cbounds);
-	        minx = Math.min(cbounds.x, minx);
-	        miny = Math.min(cbounds.y, miny);
-	        maxx = Math.max(cbounds.x + cbounds.width , maxx);
-	        maxy = Math.max(cbounds.y + cbounds.height, maxy);
-	    }
-
-	    return new Dimension((int) ((double) Math.max(maxx - minx, this.getMinimumSize().width) * zoom),
-	            (int) ((double) Math.max(maxy - miny, this.getMinimumSize().height) * zoom));
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			return tabbedSchema.getUsedArea();
+		}
+		return new Dimension((int) ((double) Math.max(0, this.getMinimumSize().width) * zoom),
+				(int) ((double) Math.max(0, this.getMinimumSize().height) * zoom));
 	}
 
 	// get the size of the viewport that we are sitting in (return null if there isn't one);
 	public Dimension getViewportSize() {
-	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
-	    if (c != null) {
-	        JViewport jvp = (JViewport) c;
-	        logger.debug("viewport size is: " + jvp.getSize()); //$NON-NLS-1$
-	        return jvp.getSize();
-	    } else {
-	        logger.debug("viewport size is NULL"); //$NON-NLS-1$
-	        return null;
-	    }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			return tabbedSchema.getViewportSize();
+		}
+        logger.debug("viewport size is NULL"); //$NON-NLS-1$
+        return null;
 	}
 
 	// set the size of the viewport that we are sitting in (return null if there isn't one);
 	public void setViewportSize(int width, int height) {
-	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
-	    if (c != null) {
-	        JViewport jvp = (JViewport) c;
-	        logger.debug("viewport size set to: " + width + "," + height); //$NON-NLS-1$ //$NON-NLS-2$
-	        jvp.setSize(width,height);
-	    }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			tabbedSchema.setViewportSize(width, height);
+			logger.debug("Height=" + this.tabbedPane.getHeight() + ";Width=" + this.tabbedPane.getWidth()); 
+		}
 	}
 
 	/**
@@ -311,60 +297,35 @@ public class PlayPen extends JPanel
 	 * no know when this gets called.
 	 */
 	protected void normalize() {
-	    if (normalizing) return;
-	    normalizing=true;
-	    int minX = 0;
-	    int minY = 0;
-
-	    for (PlayPenComponent ppc : contentPane.getChildren()) {
-	        minX = Math.min(minX, ppc.getX());
-	        minY = Math.min(minY, ppc.getY());
-	    }       
-
-	    //Readjusts the playPen's components, since minX and min <= 0,
-	    //the adjustments of subtracting minX and/or minY makes sense.
-	    if ( minX < 0 || minY < 0 ) {           
-	        for (PlayPenComponent ppc : contentPane.getChildren()) {
-	            ppc.setLocation(ppc.getX()-minX, ppc.getY()-minY);
-	        }
-
-	        // This function may have expanded the playpen's minimum
-	        // and preferred sizes, so the original repaint region could be
-	        // too small!
-	        this.repaint();
-	    }
-	    normalizing = false;
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			tabbedSchema.normalize();
+		}
 	}
 
 	//   get the position of the viewport that we are sitting in
 	public Point getViewPosition() {
-	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
-	    if (c != null) {
-	        JViewport jvp = (JViewport) c;
-	        Point viewPosition = jvp.getViewPosition();
-	        logger.debug("view position is: " + viewPosition); //$NON-NLS-1$
-	        return viewPosition;
-	    } else {
-	        return viewportPosition;
-	    }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			return tabbedSchema.getViewPosition();
+		}
+        return viewportPosition;
 	}
 
 	// set the position of the viewport that we are sitting in
 	public void setViewPosition(Point p) {
-	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
-	    if (c != null) {
-	        JViewport jvp = (JViewport) c;
-	        logger.debug("view position set to: " + p); //$NON-NLS-1$
-	        if (p != null) {
-	            jvp.setViewPosition(p);
-	        }
-
-	    }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			tabbedSchema.setViewPosition(p);
+		}
 	    viewportPosition = p;
 	}
 
 	public void setInitialViewPosition() {
-	    setViewPosition(viewportPosition);
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			tabbedSchema.setViewPosition(viewportPosition);
+		}
 	}
 
 	/** See {@link #paintingEnabled}. */
@@ -378,77 +339,7 @@ public class PlayPen extends JPanel
 	}
 
 	public void paintComponent(Graphics g) {
-	    if (!paintingEnabled) return;
-
-	    logger.debug("start of paintComponent, width=" + this.getWidth() +
-	            ",height=" + this.getHeight()); //$NON-NLS-1$ //$NON-NLS-2$
-	    Graphics2D g2 = (Graphics2D) g;
-	    g2.setColor(this.getBackground());
-	    g2.fillRect(0, 0, this.getWidth(), this.getHeight());
-	    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, antialiasSetting);
-
-	    if (isDebugEnabled()) {
-	        Rectangle clip = g2.getClipBounds();
-	        if (clip != null) {
-	            g2.setColor(Color.green);
-	            clip.width--;
-	            clip.height--;
-	            g2.draw(clip);
-	            g2.setColor(this.getBackground());
-	            logger.debug("Clipping region: "+g2.getClip()); //$NON-NLS-1$
-	        } else {
-	            logger.debug("Null clipping region"); //$NON-NLS-1$
-	        }
-	    }
-
-	    Rectangle bounds = new Rectangle();
-	    AffineTransform backup = g2.getTransform();
-	    g2.scale(zoom, zoom);
-	    AffineTransform zoomedOrigin = g2.getTransform();
-
-	    List<PlayPenComponent> relationshipsLast = new ArrayList<PlayPenComponent>();
-	    List<Relationship> relations = contentPane.getChildren(Relationship.class);
-	    List<UsageComponent> usages = contentPane.getChildren(UsageComponent.class);
-	    relationshipsLast.addAll(contentPane.getAllChildren());
-	    relationshipsLast.removeAll(relations);
-	    relationshipsLast.addAll(relations);
-	    relationshipsLast.removeAll(usages);	  
-	    relationshipsLast.addAll(usages);
-	    
-	    // counting down so visual z-order matches click detection z-order
-	    for (int i = relationshipsLast.size() - 1; i >= 0; i--) {
-	        PlayPenComponent c = relationshipsLast.get(i);
-	        c.getBounds(bounds);
-	        //expanding width and height by 1 as lines have 0 width or height when vertical/horizontal
-	        if ( g2.hitClip(bounds.x, bounds.y, bounds.width + 1, bounds.height + 1)) {
-	            if (logger.isDebugEnabled()) logger.debug("Painting visible component "+c); //$NON-NLS-1$
-	            g2.translate(c.getLocation().x, c.getLocation().y);
-	            Font g2Font = g2.getFont();
-	            c.paint(g2);
-	            g2.setFont(g2Font);
-	            g2.setTransform(zoomedOrigin);
-	        } else {
-	            if (logger.isDebugEnabled()) logger.debug("paint: SKIPPING "+c); //$NON-NLS-1$
-	            logger.debug(" skipped bounds are: x=" + bounds.x + " y=" + bounds.y + " width=" + bounds.width + " height=" + bounds.height);
-	            logger.debug(" clipping rectangle: x=" + g2.getClipBounds().x + " y=" + g2.getClipBounds().y + " width=" + g2.getClipBounds().width + " height=" + g2.getClipBounds().height);
-	        }
-	    }
-
-	    if (rubberBand != null && !rubberBand.isEmpty()) {
-	        if (logger.isDebugEnabled()) logger.debug("painting rubber band "+rubberBand); //$NON-NLS-1$
-	        g2.setColor(rubberBandColor);
-	        Composite backupComp = g2.getComposite();
-	        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
-	        g2.fillRect(rubberBand.x, rubberBand.y, rubberBand.width-1, rubberBand.height-1);
-	        g2.setComposite(backupComp);
-	        g2.drawRect(rubberBand.x, rubberBand.y, rubberBand.width-1, rubberBand.height-1);
-	    }
-
-	    g2.setTransform(backup);
-
-	    logger.debug("end of paintComponent, width=" + this.getWidth() +
-	            ",height=" + this.getHeight()); //$NON-NLS-1$ //$NON-NLS-2$
-
+		super.paintComponent(g);
 	}
 
 	/**
@@ -576,8 +467,6 @@ public class PlayPen extends JPanel
      */
     private boolean paintingEnabled = true;
 
-	private boolean normalizing;
-
     /**
      * The session that contains this playpen
      */
@@ -630,8 +519,12 @@ public class PlayPen extends JPanel
 	        Preferences prefs = p.node(session.getWorkspace().getName());
             zoom = prefs.getDouble("zoom", 1.0);
 		}
+		
+		this.setLayout(new GridLayout(1, 1));
+		this.add(this.tabbedPane);
+		logger.debug("tabbedPane---Height=" + this.tabbedPane.getHeight() + ";Width=" + this.tabbedPane.getWidth()); 
+
         viewportPosition = new Point(0, 0);
-		this.setBackground(java.awt.Color.white);
 		contentPane = ppcp;
 		contentPane.setPlayPen(this);
 		this.setName("Play Pen"); //$NON-NLS-1$
@@ -639,20 +532,67 @@ public class PlayPen extends JPanel
 		if (!GraphicsEnvironment.isHeadless()) {
 		    //XXX See http://trillian.sqlpower.ca/bugzilla/show_bug.cgi?id=3036
 		    new DropTarget(this, new PlayPenDropListener());
-		    new DragSource().createDefaultDragGestureRecognizer(this, DnDConstants.ACTION_MOVE, new TablePaneDragGestureListener());
-		    logger.debug("DragGestureRecognizer motion threshold: " + 
-		            this.getToolkit().getDesktopProperty("DnD.gestureMotionThreshold")); //$NON-NLS-1$ //$NON-NLS-2$
+            new DragSource().createDefaultDragGestureRecognizer(this, DnDConstants.ACTION_MOVE, new TablePaneDragGestureListener());
+            logger.debug("DragGestureRecognizer motion threshold: " + 
+                    this.getToolkit().getDesktopProperty("DnD.gestureMotionThreshold")); //$NON-NLS-1$ //$NON-NLS-2$
+
 		}
 		bringToFrontAction = new BringToFrontAction(this);
 		sendToBackAction = new SendToBackAction(this);
 		ppMouseListener = new PPMouseListener();
-		this.addMouseListener(ppMouseListener);
-		this.addMouseMotionListener(ppMouseListener);
-		
+		initTabbedPane();
+
 		cursorManager = new CursorManager(this);
 		fontRenderContext = null;
 	}
 
+	private void initTabbedPane() {
+        tabbedPopupMenu.add(new TabPlaceMenuItem(this.tabbedPane, Messages.getString("PlayPen.tab.TOP"), JTabbedPane.TOP));
+        tabbedPopupMenu.add(new TabPlaceMenuItem(this.tabbedPane, Messages.getString("PlayPen.tab.BOTTOM"), JTabbedPane.BOTTOM));
+        tabbedPopupMenu.add(new TabPlaceMenuItem(this.tabbedPane, Messages.getString("PlayPen.tab.LEFT"), JTabbedPane.LEFT));
+        tabbedPopupMenu.add(new TabPlaceMenuItem(this.tabbedPane, Messages.getString("PlayPen.tab.RIGHT"), JTabbedPane.RIGHT));
+
+        // popupMenu for place tab
+        tabbedPaneMouseListener = new MouseAdapter(){
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger() && e.isMetaDown()) {
+                    Object source = e.getSource();
+                    if (source instanceof JTabbedPane) {
+                        JTabbedPane pane = (JTabbedPane)source;
+                        if (pane.getTabCount() < 1) return;
+                        Rectangle rect = pane.getBoundsAt(0);
+                        if (rect == null) return;
+                        rect = new Rectangle(rect);
+                        switch (pane.getTabPlacement()) {
+                        case JTabbedPane.TOP :
+                            rect = new Rectangle(0, 0, pane.getWidth(), rect.height);
+                            break;
+                        case JTabbedPane.BOTTOM :
+                            rect = new Rectangle(0, pane.getHeight() - rect.height, pane.getWidth(), rect.height);
+                            break;
+                        case JTabbedPane.LEFT :
+                            rect = new Rectangle(0, 0, rect.width, pane.getHeight());
+                            break;
+                        case JTabbedPane.RIGHT :
+                            rect = new Rectangle(pane.getWidth() - rect.width, 0, rect.width, pane.getHeight());
+                            break;
+                        }
+                        if (rect.contains(e.getX(), e.getY())) {
+                            logger.debug("rect=" + rect + ";e.X=" + e.getX() + ";e.Y=" + e.getY());
+                            tabbedPopupMenu.show(pane, e.getX(), e.getY());
+                        }
+                    }
+                }
+            }
+        };
+        if (schemas.isEmpty()) {
+            this.tabbedPane.addMouseListener(ppMouseListener);
+            this.tabbedPane.addMouseMotionListener(ppMouseListener);
+        } else {
+            this.tabbedPane.addMouseListener(tabbedPaneMouseListener);
+        }
+	}
+	
 	/**
 	 * Creates a new PlayPen with similar contents to the given PlayPen.  The new copy will have fresh
 	 * copies of all the contained PlayPenComponents, but will share the same model as the original
@@ -674,6 +614,13 @@ public class PlayPen extends JPanel
 		this.setFont(pp.getFont());
 		this.setForeground(pp.getForeground());
 		this.setBackground(pp.getBackground());
+		
+		// clone the tabbedSchema
+		this.tabbedPane.setTabPlacement(pp.tabbedPane.getTabPlacement());
+		Iterator<TabbedSchema> it = pp.schemas.values().iterator();
+		while (it.hasNext()){
+			this.cloneTabbedSchema(it.next());
+		}
 		
 		// XXX this should be done by making PlayPenComponent cloneable.
 		// it's silly that playpen has to know about every subclass of ppc
@@ -705,6 +652,8 @@ public class PlayPen extends JPanel
 		    }
 		}		
 		this.setSize(this.getPreferredSize());
+		
+		initTabbedPane();
 	}
     
     /**
@@ -1075,7 +1024,7 @@ public class PlayPen extends JPanel
 			}
 			this.firePropertyChange("zoom", oldZoom, newZoom); //$NON-NLS-1$
 			this.revalidate();
-			this.repaint();
+			this.repaintCurrentSchema();
 		}
 	}
 
@@ -1089,7 +1038,7 @@ public class PlayPen extends JPanel
 	    } else {
 	        antialiasSetting = RenderingHints.VALUE_ANTIALIAS_OFF;
 	    }
-	    this.repaint();
+	    this.repaintCurrentSchema();
 	}
 
 	public boolean isRenderingAntialiased() {
@@ -1253,18 +1202,25 @@ public class PlayPen extends JPanel
 	 * @see PlayPenLayout#addLayoutComponent(Component,Object)
 	 */
 	public synchronized TablePane importTableCopy(SQLTable source, Point preferredLocation, DuplicateProperties duplicateProperties, boolean assignTypes) throws SQLObjectException {
+	    SQLSchema schemaParent = this.getModelOfCurrentTab();
+	    if (schemaParent == null) {
+            ArchitectFrame af = session.getArchitectFrame();
+            af.getCreatePlayPenSchemaAction().actionPerformed(newSchemaActionEvent);
+	        schemaParent = session.getTargetDatabase().getDefaultSchema();
+	    }
 	    SQLTable newTable;
 	    switch (duplicateProperties.getDefaultTransferStyle()) {
 	    case REVERSE_ENGINEER:
-	        newTable = source.createInheritingInstance(session.getTargetDatabase()); // adds newTable to db
+	        newTable = source.createInheritingInstance(schemaParent); // adds newTable to db
 	        break;
 	    case COPY:
-	        newTable = source.createCopy(session.getTargetDatabase(), duplicateProperties.isPreserveColumnSource());
+	        newTable = source.createCopy(schemaParent, duplicateProperties.isPreserveColumnSource());
 	        break;
 	    default:
 	        throw new IllegalStateException("Unknown transfer style " + duplicateProperties.getDefaultTransferStyle());
 	    }
 	    
+	    addSourceTablesMapping(source, newTable);
 	    //need to add data sources as necessary if a SQLObject was copied and pasted from one session
 	    //to another in the same context. Also need to correct the source columns to point to the 
 	    //correct session's source database objects.
@@ -1375,9 +1331,17 @@ public class PlayPen extends JPanel
             
             if(!isAlreadyOnPlaypen) {
                 if (isPrimaryKeyTableNew){
-                    tablePane =findTablePaneByName(r.getFkTable().getParent().getName(), r.getFkTable().getName());
+                    SQLTable relatedTable = this.findRelatedNewTable(r.getFkTable());
+                    if (relatedTable == null) {
+                        relatedTable = r.getFkTable();
+                    }
+                    tablePane =findTablePaneByName(relatedTable.getParent().getName(), relatedTable.getName());
                 } else {
-                    tablePane =findTablePaneByName(r.getPkTable().getParent().getName(), r.getPkTable().getName());
+                    SQLTable relatedTable = this.findRelatedNewTable(r.getPkTable());
+                    if (relatedTable == null) {
+                        relatedTable = r.getPkTable();
+                    }
+                    tablePane =findTablePaneByName(relatedTable.getParent().getName(), relatedTable.getName());
                 }
             }
             else {
@@ -1752,6 +1716,38 @@ public class PlayPen extends JPanel
 		SQLPowerUtils.unlistenToHierarchy(sqlObject, this);
 	}
 
+	/*public class PlayPenMirror extends AbstractSPObjectAdapter {
+	    private final PlayPen playPen;
+
+	    public PlayPenMirror() {
+	        this(null);
+	    }
+	    
+	    public PlayPenMirror(PlayPen playPen) {
+	        super(SQLSchema.class);
+	        this.playPen = playPen;
+	    }
+	    
+	    public void addChildAdapter(Object child) throws SQLObjectException {
+	        playPen.addTabbedSchema((SQLSchema)child);
+	    }
+	    
+	    public void removeChildAdapter(Object child)
+	            throws ObjectDependentException, SQLObjectException {
+	        playPen.removeTabbedSchema((SQLSchema)child);
+	    }
+        
+	    public String toString() {
+            return "TabbedSchemaMirro";
+        }
+	}*/
+	
+	private PlayPenMirror playPenMirror = new PlayPenMirror(this);
+	
+	public void initMirror(SPListener l) {
+	    playPenMirror.addSPListener(l);
+	}
+	
 	/**
 	 * Listens for property changes in the model (tables
 	 * added).  If this change affects the appearance of
@@ -1780,8 +1776,11 @@ public class PlayPen extends JPanel
                     } else {
                         contentPane.addChild(ppc, 0);
                     }
-
                 }
+            } else if (child instanceof SQLSchema){
+                fireEvent = false;
+                playPenMirror.addChildWithAdapter(child);
+                return;
             }
         } catch (SQLObjectException ex) {
             throw new RuntimeException(ex);
@@ -1833,10 +1832,16 @@ public class PlayPen extends JPanel
 		                }
 		            }
 		        }
+            } else if (child instanceof SQLSchema){
+                foundRemovedComponent = false;
+                playPenMirror.removeChildWithAdapter(child);
+                return;
 		    }
 		} catch (ObjectDependentException ex) {
 		    throw new RuntimeException(ex);
-		}
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
 
 		if (foundRemovedComponent) {
 		    childRemoved = true;
@@ -1851,8 +1856,10 @@ public class PlayPen extends JPanel
 	 * delegate) with a ChangeEvent.
 	 */
 	public void propertyChanged(PropertyChangeEvent e) {
-	    revalidate();
-	    this.firePropertyChange("model."+e.getPropertyName(), e.getOldValue(), e.getNewValue()); //$NON-NLS-1$
+	    if (!"parent".equals(e.getPropertyName())) {
+    	    revalidate();
+    	    this.firePropertyChange("model."+e.getPropertyName(), e.getOldValue(), e.getNewValue()); //$NON-NLS-1$
+	    }
 	}
 	
 	public void transactionStarted(TransactionEvent e) {
@@ -1866,7 +1873,7 @@ public class PlayPen extends JPanel
 	            this.revalidate();
 	        }
 	        if (childRemoved) {
-	            this.repaint();
+	            this.repaintCurrentSchema();
 	        }
 	        childAdded = false;
 	        childRemoved = false;
@@ -1924,12 +1931,15 @@ public class PlayPen extends JPanel
 	 * Selects all selectable items in the PlayPen.
 	 */
 	public void selectAll() {
- 		for (PlayPenComponent c : contentPane.getChildren()) {
- 			if (c instanceof Selectable) { 			    
- 				Selectable s = (Selectable) c;
- 				s.setSelected(true,SelectionEvent.SINGLE_SELECT);
- 			}
- 		}
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+	 		for (PlayPenComponent c : tabbedSchema.getChildren()) {
+	 			if (c instanceof Selectable) { 			    
+	 				Selectable s = (Selectable) c;
+	 				s.setSelected(true,SelectionEvent.SINGLE_SELECT);
+	 			}
+	 		}
+		}
  		mouseMode = MouseModeType.MULTI_SELECT;
 //        updateDBTree();
 	}
@@ -1943,9 +1953,12 @@ public class PlayPen extends JPanel
 		// cache of which children are selected, but the need would
 		// have to be demonstrated first.
 		List<PlayPenComponent> selected = new ArrayList<PlayPenComponent>();
- 		for (PlayPenComponent c : contentPane.getChildren()) {
- 		    if (c.isSelected()) {
- 		        selected.add(c);
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+	 		for (PlayPenComponent c : tabbedSchema.getChildren()) {
+	 		    if (c.isSelected()) {
+	 		        selected.add(c);
+				}
 			}
 		}
 		return Collections.unmodifiableList(selected);
@@ -1956,21 +1969,27 @@ public class PlayPen extends JPanel
 	 */
 	public List <ContainerPane<?, ?> > getSelectedContainers() {
 		ArrayList <ContainerPane<?, ?> > selected = new ArrayList<ContainerPane<?, ?> >();
- 		for (ContainerPane<?, ?> tp : contentPane.getChildren(ContainerPane.class)) {
- 		    if (tp.isSelected()) {
- 		        selected.add(tp);
- 		    }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+	 		for (ContainerPane<?, ?> tp : tabbedSchema.getChildren(ContainerPane.class)) {
+	 		    if (tp.isSelected()) {
+	 		        selected.add(tp);
+	 		    }
+			}
 		}
 		return Collections.unmodifiableList(selected);
 	}
 	
 	public List<DraggablePlayPenComponent> getSelectedDraggableComponents() {
 	    ArrayList <DraggablePlayPenComponent> selected = new ArrayList<DraggablePlayPenComponent>();
-        for (DraggablePlayPenComponent tp : contentPane.getChildren(DraggablePlayPenComponent.class)) {
-            if (tp.isSelected()) {
-                selected.add(tp);
-            }
-        }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+	        for (DraggablePlayPenComponent tp : tabbedSchema.getChildren(DraggablePlayPenComponent.class)) {
+	            if (tp.isSelected()) {
+	                selected.add(tp);
+	            }
+	        }
+		}
         return Collections.unmodifiableList(selected);
 	}
 
@@ -1979,10 +1998,13 @@ public class PlayPen extends JPanel
 	 */
 	public List <Relationship>getSelectedRelationShips() {
 		ArrayList<Relationship> selected = new ArrayList<Relationship>();
- 		for (Relationship r : contentPane.getChildren(Relationship.class)) {
- 		    if (r.isSelected()) {
- 		        selected.add(r);
- 		    }
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+	 		for (Relationship r : tabbedSchema.getChildren(Relationship.class)) {
+	 		    if (r.isSelected()) {
+	 		        selected.add(r);
+	 		    }
+			}
 		}
 		return Collections.unmodifiableList(selected);
 	}
@@ -2104,15 +2126,29 @@ public class PlayPen extends JPanel
 
 		}
 
+		private PlayPen getPlayPen(Component source) {
+            if (source instanceof PlayPen) {
+                return (PlayPen)source;
+            } else if (source instanceof TabbedSchemaPanel) {
+                return ((TabbedSchemaPanel)source).owner;
+            }
+            return null;
+		}
+		
 		/**
 		 * Called when a drag operation is ongoing, while the mouse
 		 * pointer is still over the operable part of the drop site for
 		 * the DropTarget registered with this listener.
 		 */
 		public void dragOver(DropTargetDragEvent dtde) {
-			PlayPen pp = (PlayPen) dtde.getDropTargetContext().getComponent();
+		    logger.debug("Drag Over:" + dtde.getDropTargetContext().getComponent());
+			PlayPen pp = getPlayPen(dtde.getDropTargetContext().getComponent());
+			if (pp ==null) return;
+			
 			Point sp = pp.unzoomPoint(new Point(dtde.getLocation()));
-			PlayPenComponent ppc = pp.contentPane.getComponentAt(sp);
+			TabbedSchema schema = pp.getCurrentSchema();
+			if (schema == null) return;
+			PlayPenComponent ppc = schema.getComponentAtSchema(sp);
 			ContainerPane<?, ?> tp;
 			if (ppc instanceof ContainerPane<?, ?>) {
 			    tp = (ContainerPane<?, ?>) ppc;
@@ -2155,8 +2191,10 @@ public class PlayPen extends JPanel
 			}
 			
 			Transferable t = dtde.getTransferable();
-			PlayPen playpen = (PlayPen) dtde.getDropTargetContext().getComponent();
-			try {
+            PlayPen playpen = getPlayPen(dtde.getDropTargetContext().getComponent());
+            if (playpen ==null) return;
+
+            try {
 			    Point dropLoc = playpen.unzoomPoint(new Point(dtde.getLocation()));
 			    if (playpen.addTransferable(t, dropLoc, TransferStyles.REVERSE_ENGINEER)){			        
 			        dtde.acceptDrop(DnDConstants.ACTION_COPY);
@@ -2440,10 +2478,18 @@ public class PlayPen extends JPanel
 		}
 
 		public void mouseClicked(MouseEvent evt) {
+			logger.debug("PPMouseListener---mouseClicked! Source Object:" + evt.getSource());
 			Point p = evt.getPoint();
 			unzoomPoint(p);
-			PlayPenComponent c = contentPane.getComponentAt(p);
 			
+			PlayPenComponent c = null;
+			
+			TabbedSchema tabbedSchema = getCurrentSchema();
+			if (tabbedSchema != null) {
+				c = tabbedSchema.getComponentAtSchema(p);
+			    logger.debug("PPMouseListener---mouseClicked Point(" + p + ") get Component:" + c + ",Point of Component:" + ( c == null ? "null" : c.getLocation()));
+			}
+
 			if (c instanceof PlayPenComponent) {
 			    c.handleMouseEvent(evt);
 			} else {
@@ -2456,13 +2502,25 @@ public class PlayPen extends JPanel
 
 
 		public void mousePressed(MouseEvent evt) {
+			logger.debug("PPMouseListener---mousePressed!");
 		    requestFocus();
 			Point p = evt.getPoint();
+			logger.debug("PPMouseListener---mousePressed! point:" + p);
 			unzoomPoint(p);
-			PlayPenComponent c = contentPane.getComponentAt(p);
+            logger.debug("PPMouseListener---mousePressed! unzoomPoint:" + p);
+
+			PlayPenComponent c = null;
+			
+			TabbedSchema tabbedSchema = getCurrentSchema();
+			if (tabbedSchema != null) {
+				c = tabbedSchema.getComponentAtSchema(p);
+                logger.debug("PPMouseListener---mousePressed get Component:" + c + ",Point:" + ( c == null ? "null" : c.getLocation()));
+			}
+
             selectionInProgress = true;
 
 			if (c instanceof PlayPenComponent) {
+			    logger.debug("PPMouseListener---mousePressed rubberBand:" + rubberBand);
 			    c.handleMouseEvent(evt);
 			} else {
 				if ((evt.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) != 0  && !evt.isPopupTrigger()) {
@@ -2470,6 +2528,7 @@ public class PlayPen extends JPanel
 					selectNone();
 					rubberBandOrigin = new Point(p);
 					rubberBand = new Rectangle(rubberBandOrigin.x, rubberBandOrigin.y, 0, 0);
+	                logger.debug("PPMouseListener---mousePressed rubberBand:" + rubberBand + ";rubberBandOrigin:" + rubberBandOrigin);
 				}
 			}
 			maybeShowPopup(evt);
@@ -2477,6 +2536,7 @@ public class PlayPen extends JPanel
 
 		public void mouseReleased(MouseEvent evt) {
 		   	
+			logger.debug("PPMouseListener---mouseReleased!");
 		    draggingContainerPanes = false;
             selectionInProgress = false;
 
@@ -2495,7 +2555,7 @@ public class PlayPen extends JPanel
 			    }
 			}
 			maybeShowPopup(evt);
-			repaint();
+			repaintCurrentSchema();
 //            updateDBTree();
 		}
 
@@ -2509,14 +2569,19 @@ public class PlayPen extends JPanel
 				// repaint old region in case of shrinkage
 				Rectangle dirtyRegion = zoomRect(new Rectangle(rubberBand));
 
+                logger.debug("PPMouseListener---mouseMoved Point:" + evt.getPoint());
 				Point p = unzoomPoint(evt.getPoint());
+                logger.debug("PPMouseListener---mouseMoved unzoomPoint:" + p);
 				rubberBand.setBounds(rubberBandOrigin.x, rubberBandOrigin.y, 0, 0);
 				rubberBand.add(p);
 
 				mouseMode = MouseModeType.RUBBERBAND_MOVE;
 				// update selected items
-				for (PlayPenComponent c : contentPane.getChildren()) {					 
-					c.handleMouseEvent(evt);
+				TabbedSchema tabbedSchema = getCurrentSchema();
+				if (tabbedSchema != null){
+					for (PlayPenComponent c : tabbedSchema.getChildren()) {					 
+						c.handleMouseEvent(evt);
+					}
 				}
 
 				// Add the new rubberband to the dirty region and grow
@@ -2539,7 +2604,7 @@ public class PlayPen extends JPanel
 			dirtyRegion.y -= 3;
 			dirtyRegion.width += 6;
 			dirtyRegion.height += 6;
-			repaint(dirtyRegion);
+			repaintSchema(dirtyRegion);
 		}
 
 		/**
@@ -2547,7 +2612,13 @@ public class PlayPen extends JPanel
 		 */
 		public void maybeShowPopup(MouseEvent evt) {
 		    Point p = unzoomPoint(evt.getPoint());
-		    PlayPenComponent c = contentPane.getComponentAt(p);
+			PlayPenComponent c = null;
+			
+			TabbedSchema tabbedSchema = getCurrentSchema();
+			if (tabbedSchema != null) {
+				c = tabbedSchema.getComponentAtSchema(p);
+			}
+            logger.debug("maybeShowPopup---from the point:(" + p + ") get Component:" + c + " at Point:" + ( c == null ? "null" : c.getLocation()));
 		    if(!mouseMode.equals(MouseModeType.CREATING_RELATIONSHIP) && 
 		            !mouseMode.equals(MouseModeType.CREATING_TABLE)) {
     		    if (c != null) {
@@ -2559,10 +2630,13 @@ public class PlayPen extends JPanel
     		        }
     		    } else {
     		        if (evt.isPopupTrigger() && popupFactory != null) {
-    		            JPanel pp = (JPanel) evt.getSource();
-    		            //XXX we should let popupfactory to produce playpencomponent popup as well
-    		            JPopupMenu popup = popupFactory.createPopupMenu(null);
-    		            popup.show(pp, evt.getX(), evt.getY());
+    		        	Object source = evt.getSource();
+    		        	if (source instanceof Component) {
+    		        		Component pp = (Component) source;
+	    		            //XXX we should let popupfactory to produce playpencomponent popup as well
+	    		            JPopupMenu popup = popupFactory.createPopupMenu(null);
+	    		            popup.show(pp, evt.getX(), evt.getY());
+    		        	} 
     		        }
     		    }
 		    }
@@ -2637,7 +2711,8 @@ public class PlayPen extends JPanel
 		public FloatingContainerPaneListener(PlayPen pp, Map<DraggablePlayPenComponent, Point> ppcToHandleMap) {
 			this.pp = pp;
 			Point pointerLocation = MouseInfo.getPointerInfo().getLocation();
-			SwingUtilities.convertPointFromScreen(pointerLocation,pp);
+			pp.convertPointFromScreen(pointerLocation);
+			
 			logger.debug("Adding floating container pane at:"+ pointerLocation); //$NON-NLS-1$
 			
 			this.ppcToHandleMap = new HashMap<DraggablePlayPenComponent, Point>(ppcToHandleMap);
@@ -2650,8 +2725,8 @@ public class PlayPen extends JPanel
 			    ppcToPointMap.put(ppc, point);
 			}
 
-			pp.addMouseMotionListener(this);
-			pp.addMouseListener(this); // the click that ends this operation
+			pp.addMouseMotionListenerToSchema(this);
+			pp.addMouseListenerToSchema(this); // the click that ends this operation
 
 			pp.cursorManager.tableDragStarted();
 		}
@@ -2666,16 +2741,21 @@ public class PlayPen extends JPanel
 		        Point handle = entry.getValue();
 		        Point p = ppcToPointMap.get(ppc);
 		        
-		        pp.zoomPoint(e.getPoint());
-		        p.setLocation(e.getPoint().x - handle.x, e.getPoint().y - handle.y);
+		        Point ep = e.getPoint();
+		        //pp.zoomPoint(ep);
+		        //pp.convertPointForPlayPen(ConvertTypeForPlayPen.FromPlayPen, ep);
+		        
+		        p.setLocation(ep.x - handle.x, ep.y - handle.y);
 		        pp.setChildPosition(ppc, p);
-		        JViewport viewport = (JViewport)SwingUtilities.getAncestorOfClass(JViewport.class, pp);
+		        JViewport viewport = pp.getCurrentViewport();
 		        if(viewport==null || pp.getSelectedItems().size() < 1) 
 		            return; 
 
 		        // Theoretically should re-validate after each scroll. But that would 
 		        // cause the selected component to fall off the border.
-		        pp.revalidate();
+		        //pp.revalidate();
+		        pp.repaintCurrentSchema();
+		        
 		        Point viewPos = viewport.getViewPosition(); 
 		        Rectangle view = viewport.getViewRect();
 		        int viewHeight = viewport.getHeight(); 
@@ -2693,7 +2773,7 @@ public class PlayPen extends JPanel
 		            view.x = bounds.x + bounds.width - viewWidth + scrollUnits.right;
 		        }
 		        logger.debug(viewport.getViewPosition());
-		        pp.scrollRectToVisible(view);
+		        pp.scrollRectToVisibleForSchema(view);
 		        // Necessary to stop tables from flashing.
 		        if (ppc != null) {
 		            ppc.repaint();
@@ -2721,8 +2801,8 @@ public class PlayPen extends JPanel
 		protected void cleanup() {
 		    pp.cursorManager.placeModeFinished();
 		    pp.cursorManager.tableDragFinished();
-		    pp.removeMouseMotionListener(this);
-		    pp.removeMouseListener(this);
+		    pp.removeMouseMotionListenerFromSchema(this);
+		    pp.removeMouseListenerFromSchema(this);
 		}
 	}
 
@@ -2757,7 +2837,7 @@ public class PlayPen extends JPanel
 			    
 				if (c instanceof TablePane) {
 				    for (Relationship r : pp.getContentPane().getChildren(Relationship.class)) {
-				        if (c == r.getFkTable() || c == r.getPkTable()) {
+				        if (c == r.getRelationshipConnectible(false) || c == r.getRelationshipConnectible(true)) {
 				            if (dependentComponents.add(r)) {
 				                try {
 				                    pp.getContentPane().removeChild(r);
@@ -2786,7 +2866,7 @@ public class PlayPen extends JPanel
 			            c, pp.getContentPane().getFirstDependentComponentIndex());
 			}
 			
-			pp.repaint();
+			pp.repaintCurrentSchema();
 			pp.getContentPane().commit();
 		}
 	}
@@ -2823,7 +2903,7 @@ public class PlayPen extends JPanel
 		        
                 if (c instanceof TablePane) {
                     for (Relationship r : pp.getContentPane().getChildren(Relationship.class)) {
-                        if (c == r.getFkTable() || c == r.getPkTable()) {
+                        if (c == r.getRelationshipConnectible(false) || c == r.getRelationshipConnectible(true)) {
                             if (dependentComponents.add(r)) {
                                 try {
                                     pp.getContentPane().removeChild(r);
@@ -2853,7 +2933,7 @@ public class PlayPen extends JPanel
                         c, pp.getContentPane().getChildren().size());
 		    }
 		    
-			pp.repaint();
+			pp.repaintCurrentSchema();
 			pp.getContentPane().commit();
 		}
 	}
@@ -3451,16 +3531,19 @@ public class PlayPen extends JPanel
             r.setSize(visibleRect.width, r.height);
         }
         
-        this.scrollRectToVisible(zoomRect(r));
+        this.scrollRectToVisibleForSchema(zoomRect(r));
     }
     
     public void updateTablePanes() {
-        for (TablePane tp : contentPane.getChildren(TablePane.class)) {
-            tp.updateHiddenColumns();
-            tp.updateNameDisplay();
-            tp.revalidate();
-            tp.repaint();
-        }
+    	TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null){
+	        for (TablePane tp : tabbedSchema.getChildren(TablePane.class)) {
+	            tp.updateHiddenColumns();
+	            tp.updateNameDisplay();
+	            tp.revalidate();
+	            tp.repaint();
+	        }
+		}
     }
     
     // PlayPen Lifecycle Event
@@ -3478,4 +3561,721 @@ public class PlayPen extends JPanel
         }
     }
     
+    // 
+    /**
+     * one tab for one schema, and the tab is an object of class TabbedSchema.
+     * @author jianjun.tan
+     */
+    private class TabbedSchema extends JScrollPane {
+		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -4251419608039302762L;
+		
+		private final SQLSchema model;
+		private final PlayPen owner;
+		private final TabbedSchemaPanel tabbedSchemaPanel;
+		
+    	public TabbedSchema(SQLSchema model, PlayPen owner) {
+    		this.model = model;
+    		this.owner = owner;
+    		this.tabbedSchemaPanel = new TabbedSchemaPanel(model, owner);
+    		setAutoscrolls(true);
+    		setViewportView(this.tabbedSchemaPanel);
+    		logger.debug("tabbedPane in TabbedSchema---Height=" + this.owner.tabbedPane.getHeight() + ";Width=" + this.owner.tabbedPane.getWidth()); 
+    	}
+    	
+    	/**
+    	 * Clone a TabbedSchema for a new PlayPen.
+    	 * @param cloned
+    	 * @param newOwner
+    	 */
+    	public TabbedSchema(TabbedSchema copyMe, PlayPen newOwner) {
+    		this.model = copyMe.model;
+    		this.owner = newOwner;
+    		this.tabbedSchemaPanel = new TabbedSchemaPanel(copyMe.model, owner);
+    		setAutoscrolls(true);
+    		setViewportView(this.tabbedSchemaPanel);
+    	}
+    	
+    	public String getUUID() {
+    		return this.model.getUUID();
+    	}
+    	
+    	public String getSchemaName() {
+    		return this.model.getName();
+    	}
+    	
+    	public void repaintSchema(Rectangle r) {
+    	    this.tabbedSchemaPanel.repaint(r);
+    	}
+    	
+        public PlayPenComponent getComponentAtSchema(Point p) {
+            for (PlayPenComponent ppc : this.owner.contentPane.getAllChildrenOfSchema(this.model)) {
+                if (ppc.contains(p)) {
+                    return ppc;
+                }
+            }
+            return (PlayPenComponent)null;
+        }
+        
+        public Dimension getUsedArea() {
+        	return this.tabbedSchemaPanel.getUsedArea();
+        }
+        
+        public Dimension getViewportSize() {
+        	return this.tabbedSchemaPanel.getViewportSize();
+        }
+        
+        public void setViewportSize(int width, int height) {
+        	this.tabbedSchemaPanel.setViewportSize(width, height);
+        }
+        
+        protected void normalize() {
+        	this.tabbedSchemaPanel.normalize();
+        }
+        
+        public Point getViewPosition() {
+        	return this.tabbedSchemaPanel.getViewPosition();
+        }
+        
+        public void setViewPosition(Point p) {
+        	this.tabbedSchemaPanel.setViewPosition(p);
+        }
+        
+        public JViewport getCurrentViewport() {
+        	return (JViewport)SwingUtilities.getAncestorOfClass(JViewport.class, this.tabbedSchemaPanel);
+        }
+        
+        public void refreshViewport() {
+        	this.tabbedSchemaPanel.revalidate();
+        	this.tabbedSchemaPanel.repaint();
+        }
+        
+        public List<? extends PlayPenComponent> getChildren() {
+        	return this.owner.contentPane.getChildrenOfSchema(this.model);
+        }
+
+        public <T extends SPObject> List<T> getChildren(Class<T> type) {
+        	return this.owner.contentPane.getChildrenOfSchema(this.model, type);
+        }
+        
+        /**
+         * Convert a point from a screen coordinates to a tabbedSchemaPanel's coordinate system,
+         * or from a tabbedSchemaPanel's coordinates to a screen coordinate system.
+         * @param type
+         * @param p
+         */
+        private void convertPoint(ConvertTypeForScreen type, Point p) {
+            if (type == ConvertTypeForScreen.FromScreen) {
+                SwingUtilities.convertPointFromScreen(p, this.tabbedSchemaPanel);
+                return;
+            }
+            SwingUtilities.convertPointToScreen(p, this.tabbedSchemaPanel);
+        }
+        
+        /**
+         * Convert a point from a playpen coordinates to a tabbedSchemaPanel's coordinate system,
+         * or from a tabbedSchemaPanel's coordinates to a playpen coordinate system.
+         * @param type
+         * @param p
+         * @return
+         */
+        private Point convertPoint(ConvertTypeForPlayPen type, Point p) {
+            if (type == ConvertTypeForPlayPen.FromPlayPen){
+                p.x -= this.getX() + this.tabbedSchemaPanel.getX();
+                p.y -= this.getY() + this.tabbedSchemaPanel.getY();
+                return p;
+            }
+            p.x += this.getX() + this.tabbedSchemaPanel.getX();
+            p.y += this.getY() + this.tabbedSchemaPanel.getY();
+            return p;
+        }
+        
+        public MouseMotionListener[] getMouseMotionListenersFromSchema() {
+            return this.tabbedSchemaPanel.getMouseMotionListeners();
+        }
+
+        public MouseListener[] getMouseListenersFromSchema() {
+            return this.tabbedSchemaPanel.getMouseListeners();
+        }
+        
+        public void addMouseMotionListenerToSchema(MouseMotionListener l) {
+            this.tabbedSchemaPanel.addMouseMotionListener(l);
+        }
+
+        public void addMouseListenerToSchema(MouseListener l) {
+            this.tabbedSchemaPanel.addMouseListener(l);
+        }
+        
+        public void removeMouseMotionListenerFromSchema(MouseMotionListener l) {
+            this.tabbedSchemaPanel.removeMouseMotionListener(l);
+        }
+
+        public void removeMouseListenerFromSchema(MouseListener l) {
+            this.tabbedSchemaPanel.removeMouseListener(l);
+        }
+        
+        public void scrollRectToVisibleForSchema(Rectangle aRect) {
+            this.tabbedSchemaPanel.scrollRectToVisible(aRect);
+        }
+    }
+    
+    private class TabbedSchemaPanel extends JPanel {
+    	
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -8954302609549046205L;
+		private final SQLSchema model;
+		private final PlayPen owner;
+		private boolean normalizing;
+
+		public TabbedSchemaPanel(SQLSchema model, PlayPen owner) {
+			this.model = model;
+			this.owner = owner;
+    		this.setBackground(java.awt.Color.white);
+    		this.addMouseListener(ppMouseListener);
+    		this.addMouseMotionListener(ppMouseListener);
+
+    		if (!GraphicsEnvironment.isHeadless()) {
+    			new DropTarget(this, new PlayPenDropListener());
+			    new DragSource().createDefaultDragGestureRecognizer(this, DnDConstants.ACTION_MOVE, new TablePaneDragGestureListener());
+			    logger.debug("DragGestureRecognizer motion threshold: " + 
+			            this.getToolkit().getDesktopProperty("DnD.gestureMotionThreshold")); //$NON-NLS-1$ //$NON-NLS-2$
+    		}
+		}
+		
+        // -------------------------- JComponent overrides ---------------------------
+
+       	/**
+       	 * Calculates the smallest rectangle that will completely
+       	 * enclose the visible components.
+       	 *
+       	 * This is then compared to the viewport size, one dimension
+       	 * at a time.  To ensure the whole playpen is "live", always
+       	 * choose the larger number in each Dimension.
+       	 *
+       	 * There is also a lower bound on how small the playpen can get.  The
+       	 * layout manager returns a preferred size of (100,100) when asked.
+       	 */
+       	public Dimension getPreferredSize() {
+
+       	    Dimension usedSpace = this.getUsedArea();
+       	    Dimension vpSize = this.getViewportSize();
+       	    Dimension ppSize = null;
+
+       	    // viewport seems to never come back as null, but protect anyways...
+       	    if (vpSize != null) {
+       	        ppSize = new Dimension(Math.max(usedSpace.width, vpSize.width),
+       	                Math.max(usedSpace.height, vpSize.height));
+       	    }
+
+       	    if (logger.isDebugEnabled()) {
+       	        logger.debug("minsize is: " + this.getMinimumSize()); //$NON-NLS-1$
+       	        logger.debug("unzoomed userDim is: " + unzoomPoint(new Point(usedSpace.width,usedSpace.height))); //$NON-NLS-1$
+       	        logger.debug("zoom="+zoom+",usedSpace size is " + usedSpace); //$NON-NLS-1$ //$NON-NLS-2$
+       	    }
+
+       	    if (ppSize != null) {
+       	        logger.debug("preferred size is ppSize (viewport size was null): " + ppSize); //$NON-NLS-1$
+       	        return ppSize;
+       	    } else {
+       	        logger.debug("preferred size is usedSpace: " + usedSpace); //$NON-NLS-1$
+       	        return usedSpace;
+       	    }
+       	}
+           
+       public Dimension getUsedArea() {
+       	    Rectangle cbounds = null;
+       	    int minx = 0, miny = 0, maxx = 0, maxy = 0;
+       	    for (PlayPenComponent c : this.owner.contentPane.getAllChildrenOfSchema(this.model)) {
+       	        cbounds = c.getBounds(cbounds);
+       	        minx = Math.min(cbounds.x, minx);
+       	        miny = Math.min(cbounds.y, miny);
+       	        maxx = Math.max(cbounds.x + cbounds.width , maxx);
+       	        maxy = Math.max(cbounds.y + cbounds.height, maxy);
+       	    }
+
+       	    return new Dimension((int) ((double) Math.max(maxx - minx, this.getMinimumSize().width) * this.owner.zoom),
+       	            (int) ((double) Math.max(maxy - miny, this.getMinimumSize().height) * this.owner.zoom));
+       	}
+
+       	// get the size of the viewport that we are sitting in (return null if there isn't one);
+       	public Dimension getViewportSize() {
+       	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
+       	    if (c != null) {
+       	        JViewport jvp = (JViewport) c;
+       	        logger.debug("viewport size is: " + jvp.getSize()); //$NON-NLS-1$
+       	        return jvp.getSize();
+       	    } else {
+       	        logger.debug("viewport size is NULL"); //$NON-NLS-1$
+       	        return null;
+       	    }
+       	}
+
+       	// set the size of the viewport that we are sitting in (return null if there isn't one);
+       	public void setViewportSize(int width, int height) {
+       	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
+       	    if (c != null) {
+       	        JViewport jvp = (JViewport) c;
+       	        logger.debug("viewport size set to: " + width + "," + height); //$NON-NLS-1$ //$NON-NLS-2$
+       	        jvp.setSize(width,height);
+       	    }
+       	}
+       	/**
+       	 * If some playPen components get dragged into a negative range all tables are then shifted
+       	 * so that the lowest x and y values are 0.  The tables will retain their relative location.
+       	 *
+       	 * If this function is moved into a layout manager it causes problems with undo because we do
+       	 * no know when this gets called.
+       	 */
+       	protected void normalize() {
+       	    if (normalizing) return;
+       	    normalizing=true;
+       	    int minX = 0;
+       	    int minY = 0;
+
+       	    for (PlayPenComponent ppc : this.owner.contentPane.getAllChildrenOfSchema(this.model)) {
+       	        minX = Math.min(minX, ppc.getX());
+       	        minY = Math.min(minY, ppc.getY());
+       	    }       
+
+       	    //Readjusts the playPen's components, since minX and min <= 0,
+       	    //the adjustments of subtracting minX and/or minY makes sense.
+       	    if ( minX < 0 || minY < 0 ) {           
+       	        for (PlayPenComponent ppc : this.owner.contentPane.getAllChildrenOfSchema(this.model)) {
+       	            ppc.setLocation(ppc.getX()-minX, ppc.getY()-minY);
+       	        }
+
+       	        // This function may have expanded the playpen's minimum
+       	        // and preferred sizes, so the original repaint region could be
+       	        // too small!
+       	        this.repaint();
+       	    }
+       	    normalizing = false;
+       	}
+
+       	//   get the position of the viewport that we are sitting in
+       	public Point getViewPosition() {
+       	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
+       	    if (c != null) {
+       	        JViewport jvp = (JViewport) c;
+       	        Point viewPosition = jvp.getViewPosition();
+       	        logger.debug("view position is: " + viewPosition); //$NON-NLS-1$
+       	        return viewPosition;
+       	    }
+       	    return null;
+       	}
+
+       	// set the position of the viewport that we are sitting in
+       	public void setViewPosition(Point p) {
+       	    Container c = SwingUtilities.getAncestorOfClass(JViewport.class, this);
+       	    if (c != null) {
+       	        JViewport jvp = (JViewport) c;
+       	        logger.debug("view position set to: " + p); //$NON-NLS-1$
+       	        if (p != null) {
+       	            jvp.setViewPosition(p);
+       	        }
+       	    }
+       	}
+
+       	public void paintComponent(Graphics g) {
+       	    if (!this.owner.paintingEnabled) return;
+
+       	    logger.debug("TabbedSchema -- start of paintComponent, location=" + this.getLocation() + ";size=" + this.getSize()); //$NON-NLS-1$ //$NON-NLS-2$
+       	    Graphics2D g2 = (Graphics2D) g;
+       	    g2.setColor(this.getBackground());
+       	    g2.fillRect(0, 0, this.getWidth(), this.getHeight());
+       	    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, this.owner.antialiasSetting);
+
+       	    if (isDebugEnabled()) {
+       	        Rectangle clip = g2.getClipBounds();
+       	        if (clip != null) {
+                    logger.debug("TabbedSchema -- Clipping region: "+clip); //$NON-NLS-1$
+       	            g2.setColor(Color.green);
+       	            clip.width--;
+       	            clip.height--;
+       	            g2.draw(clip);
+       	            g2.setColor(this.getBackground());
+       	            logger.debug("TabbedSchema -- Clipping regions: "+clip); //$NON-NLS-1$
+       	        } else {
+       	            logger.debug("TabbedSchema -- Null clipping region"); //$NON-NLS-1$
+       	        }
+       	    }
+
+       	    Rectangle bounds = new Rectangle();
+       	    AffineTransform backup = g2.getTransform();
+       	    g2.scale(this.owner.zoom, this.owner.zoom);
+       	    AffineTransform zoomedOrigin = g2.getTransform();
+
+       	    List<PlayPenComponent> relationshipsLast = new ArrayList<PlayPenComponent>();
+       	    List<AcrossedSchemaPane> acrossedSchemas = this.owner.contentPane.getChildrenOfSchema(this.model, AcrossedSchemaPane.class);
+            List<Relationship> relations = this.owner.contentPane.getChildrenOfSchema(this.model, Relationship.class);
+       	    List<UsageComponent> usages = this.owner.contentPane.getChildrenOfSchema(this.model, UsageComponent.class);
+       	    relationshipsLast.addAll(this.owner.contentPane.getAllChildrenOfSchema(this.model));
+            relationshipsLast.removeAll(acrossedSchemas);
+            relationshipsLast.addAll(acrossedSchemas);
+       	    relationshipsLast.removeAll(relations);
+       	    relationshipsLast.addAll(relations);
+       	    relationshipsLast.removeAll(usages);	  
+       	    relationshipsLast.addAll(usages);
+       	    
+       	    // counting down so visual z-order matches click detection z-order
+       	    for (int i = relationshipsLast.size() - 1; i >= 0; i--) {
+       	        PlayPenComponent c = relationshipsLast.get(i);
+       	        c.getBounds(bounds);
+       	        //bounds.setLocation(this.owner.translateToSchema(bounds.getLocation()));
+       	        //expanding width and height by 1 as lines have 0 width or height when vertical/horizontal
+       	        if ( g2.hitClip(bounds.x, bounds.y, bounds.width + 1, bounds.height + 1)) {
+       	            if (logger.isDebugEnabled()) {
+       	            	logger.debug("TabbedSchema -- Painting visible component "+ c + " at Point(" + c.getX() + "," + c.getY() + ")"); //$NON-NLS-1$
+       	            	logger.debug("TabbedSchema -- bounds : "+ bounds); //$NON-NLS-1$
+       	            	logger.debug("TabbedSchema -- c : x="+ c.getLocation().x + ";y=" + c.getLocation().y + ";width=" + c.getWidth() + ";height=" + c.getHeight()); //$NON-NLS-1$
+       	            }
+       	            g2.translate(c.getLocation().x, c.getLocation().y);
+       	            Font g2Font = g2.getFont();
+       	            if (c instanceof Relationship) {
+       	                ((Relationship)c).paint(model, g2);
+       	            } else {
+       	                c.paint(g2);
+       	            }
+       	            g2.setFont(g2Font);
+       	            g2.setTransform(zoomedOrigin);
+       	        } else {
+       	            if (logger.isDebugEnabled()) {
+       	            	logger.debug("TabbedSchema -- paint: SKIP PING "+c); //$NON-NLS-1$
+           	            logger.debug("TabbedSchema --  skipped bounds are: x=" + bounds.x + " y=" + bounds.y + " width=" + bounds.width + " height=" + bounds.height);
+           	            logger.debug("TabbedSchema --  clipping rectangle: x=" + g2.getClipBounds().x + " y=" + g2.getClipBounds().y + " width=" + g2.getClipBounds().width + " height=" + g2.getClipBounds().height);
+       	            }
+       	        }
+       	    }
+
+       	    if (this.owner.rubberBand != null && !this.owner.rubberBand.isEmpty()) {
+       	        if (logger.isDebugEnabled()) logger.debug("TabbedSchema -- painting rubber band "+this.owner.rubberBand); //$NON-NLS-1$
+       	        g2.setColor(this.owner.rubberBandColor);
+       	        Composite backupComp = g2.getComposite();
+       	        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
+       	        g2.fillRect(this.owner.rubberBand.x, this.owner.rubberBand.y, 
+       	        		this.owner.rubberBand.width-1, this.owner.rubberBand.height-1);
+       	        g2.setComposite(backupComp);
+       	        g2.drawRect(this.owner.rubberBand.x, this.owner.rubberBand.y, 
+       	        		this.owner.rubberBand.width-1, this.owner.rubberBand.height-1);
+       	    }
+
+       	    g2.setTransform(backup);
+
+       	    logger.debug("TabbedSchema -- end of paintComponent, width=" + this.getWidth() +
+       	            ",height=" + this.getHeight()); //$NON-NLS-1$ //$NON-NLS-2$
+       	}
+    }
+    
+    private class TabPlaceMenuItem extends JCheckBoxMenuItem {
+
+        /**
+         * 
+         */
+        private static final long serialVersionUID = -2056196605812821822L;
+        
+        public TabPlaceMenuItem(final JTabbedPane relatedTab, String title, final int placement) {
+            super(title);
+            boolean isPlacement = (relatedTab.getTabPlacement() == placement);
+            this.setSelected(isPlacement);
+            this.setEnabled(!isPlacement);
+            this.addActionListener(
+                    new ActionListener() {
+                        public void actionPerformed(ActionEvent e) {
+                            relatedTab.setTabPlacement(placement);
+                        }
+                    });
+            relatedTab.addPropertyChangeListener(new PropertyChangeListener(){
+                @Override
+                public void propertyChange(PropertyChangeEvent evt) {
+                    String pn = evt.getPropertyName();
+                    if ("tabPlacement".equals(pn)) {
+                        boolean isPlacement = (relatedTab.getTabPlacement() == placement);
+                        TabPlaceMenuItem.this.setSelected(isPlacement);
+                        TabPlaceMenuItem.this.setEnabled(!isPlacement);
+                    }
+                }
+            });
+        }
+        
+    }
+    
+    private TabbedSchema getCurrentSchema(){
+    	Component c = tabbedPane.getSelectedComponent();
+    	if (c instanceof TabbedSchema) return (TabbedSchema)c;
+    	return null;
+    }
+    
+    public SQLSchema getModelOfCurrentTab() {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema == null){
+            return null;
+        }
+        return tabbedSchema.model;
+    }
+
+    protected TabbedSchema getTabbedSchema(SQLSchema schema) {
+    	return schemas.get(schema.getUUID());
+    }
+    
+    private void cloneTabbedSchema(TabbedSchema tabbedSchema){
+    	TabbedSchema newSchema = new TabbedSchema(tabbedSchema, this);
+    	this.tabbedPane.addTab(newSchema.getSchemaName(), 
+        		SPSUtils.createIcon("new_schema", newSchema.getSchemaName(), ArchitectSwingSessionContext.ICON_SIZE), 
+        		newSchema);
+    	this.schemas.put(newSchema.getUUID(), newSchema);    	
+    }
+    
+    public void addTabbedSchema(SQLSchema schema) throws SQLObjectException{
+    	TabbedSchema tabbedSchema = getTabbedSchema(schema);
+    	if (tabbedSchema != null){
+    		throw new SQLObjectException("This schema \"" + schema.getName() + "\" is created yet!");
+    	}
+    	if (schemas.isEmpty()) {
+    	    this.tabbedPane.removeMouseListener(ppMouseListener);
+    	    this.tabbedPane.removeMouseMotionListener(ppMouseListener);
+    	    this.tabbedPane.addMouseListener(tabbedPaneMouseListener);
+    	}
+    	
+    	tabbedSchema = new TabbedSchema(schema, this);
+    	this.tabbedPane.addTab(schema.getName(), 
+        		SPSUtils.createIcon("new_schema", schema.getName(), ArchitectSwingSessionContext.ICON_SIZE), 
+        		tabbedSchema);
+    	Iterator<TabbedSchema> it = schemas.values().iterator();
+    	while (it.hasNext()){
+    	    TabbedSchema sch = it.next();
+            this.contentPane.addChild(new AcrossedSchemaPane(tabbedSchema.model, sch.model, this.contentPane), 0);
+            this.contentPane.addChild(new AcrossedSchemaPane(sch.model, tabbedSchema.model, this.contentPane), 0);
+    	}
+        schemas.put(tabbedSchema.getUUID(), tabbedSchema);
+        schema.addSPListener(schemaNameListener);
+    }
+    
+    public void removeTabbedSchema(SQLSchema schema) throws ObjectDependentException {
+    	TabbedSchema tabbedSchema = getTabbedSchema(schema);
+    	if (tabbedSchema == null){
+    		throw new ObjectDependentException("This schema \"" + schema.getName() + "\" is not existed now!");
+    	}
+    	this.tabbedPane.remove(tabbedSchema);
+    	schemas.remove(tabbedSchema.getUUID());
+    	schema.removeSPListener(schemaNameListener);
+        Iterator<TabbedSchema> it = schemas.values().iterator();
+        while (it.hasNext()){
+            TabbedSchema sch = it.next();
+            this.contentPane.removeChild(getAcrossedSchemaPane(tabbedSchema.model, sch.model));
+            this.contentPane.removeChild(getAcrossedSchemaPane(sch.model, tabbedSchema.model));
+        }
+        if (schemas.isEmpty()) {
+            this.tabbedPane.removeMouseListener(tabbedPaneMouseListener);
+            this.tabbedPane.addMouseListener(ppMouseListener);
+            this.tabbedPane.addMouseMotionListener(ppMouseListener);
+        }
+    }
+    
+    /**
+     * Get the acrossed schema pane related "acrossedSchema" that display in
+     * the "model" tab schema pane of PlayPen.
+     * Used internal except of loading project file
+     * @param model
+     * @param acrossedSchema
+     * @return
+     */
+    public AcrossedSchemaPane getAcrossedSchemaPane(SQLSchema model, SQLSchema acrossedSchema) {
+        List<AcrossedSchemaPane> acrossedSchemaPanes = this.contentPane.getChildrenOfSchema(model, AcrossedSchemaPane.class);
+        for (AcrossedSchemaPane asp : acrossedSchemaPanes) {
+            if (asp.getAcrossedSchema() == acrossedSchema) {
+                return asp;
+            }
+        }
+        return null;
+    }
+    
+    public JViewport getCurrentViewport(){
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			return tabbedSchema.getCurrentViewport();
+		}
+    	return null;
+    }
+    
+    public void scrollRectToVisibleForSchema(Rectangle aRect) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.scrollRectToVisibleForSchema(aRect);
+        }
+    }
+    
+    public void repaintCurrentSchema() {
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+			tabbedSchema.refreshViewport();
+		}
+    }
+    
+    public List<? extends PlayPenComponent> getChildrenOfActiveSchema() {
+		TabbedSchema tabbedSchema = getCurrentSchema();
+		if (tabbedSchema != null) {
+	 		return tabbedSchema.getChildren();
+		}
+		return new ArrayList<PlayPenComponent>();
+    }
+    
+    /**
+     * Convert a point from a screen coordinates to a component's 
+     * coordinate system related TabbedSchemaPanel.
+     * @param p
+     */
+    private void convertPointFromScreen(Point p) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.convertPoint(ConvertTypeForScreen.FromScreen, p);
+            return;
+        }
+        SwingUtilities.convertPointFromScreen(p, this);
+    }
+    
+    /**
+     * Convert a point from a component's coordinates related TabbedSchemaPanel,
+     *  to a screen coordinate system.
+     * @param p
+     */
+    public void convertPointToScreen(Point p) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.convertPoint(ConvertTypeForScreen.ToScreen, p);
+            return;
+        }
+        SwingUtilities.convertPointToScreen(p, this);
+    }
+
+    /**
+     * Convert a point from a component's coordinates related TabbedSchemaPanel,
+     *  to a playpen coordinate system, or from a playpen coordinates to a component's 
+     *  coordinate system related TabbedSchemaPanel.
+     * @param type 
+     * <li>type=ConvertTypeForPlayPen.ToPlayPen: param <b>p</b> is a component's coordinates related TabbedSchemaPanel
+     * <li>type=ConvertTypeForPlayPen.FromPlayPen: param <b>p</b> is a playpen coordinates
+     * @param p
+     * @return
+     */
+    public Point convertPointForPlayPen(ConvertTypeForPlayPen type, Point p) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            return tabbedSchema.convertPoint(type, p);
+        }
+        return p;
+    }
+    
+    public MouseMotionListener[]  getMouseMotionListenersFromSchema() {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            return tabbedSchema.getMouseMotionListenersFromSchema();
+        }
+        return super.getMouseMotionListeners();
+    }
+
+    public MouseListener[]  getMouseListenersFromSchema() {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            return tabbedSchema.getMouseListenersFromSchema();
+        }
+        return super.getMouseListeners();
+    }
+    
+    public void addMouseMotionListenerToSchema(MouseMotionListener l) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.addMouseMotionListenerToSchema(l);
+            return;
+        }
+        super.addMouseMotionListener(l);
+    }
+
+    public void addMouseListenerToSchema(MouseListener l) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.addMouseListenerToSchema(l);
+            return;
+        }
+        super.addMouseListener(l);
+    }
+
+    public void removeMouseMotionListenerFromSchema(MouseMotionListener l) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.removeMouseMotionListenerFromSchema(l);
+            return;
+        }
+        super.removeMouseMotionListener(l);
+    }
+
+    public void removeMouseListenerFromSchema(MouseListener l) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.removeMouseListenerFromSchema(l);
+            return;
+        }
+        super.removeMouseListener(l);
+    }
+
+    public void repaintSchema(Rectangle r) {
+        TabbedSchema tabbedSchema = getCurrentSchema();
+        if (tabbedSchema != null) {
+            tabbedSchema.repaintSchema(r);
+            return;
+        }
+        repaint(r);
+    }
+    
+    public SQLSchema getSchemaByName(String schName) {
+        Iterator<TabbedSchema> it = schemas.values().iterator();
+        while (it.hasNext()){
+            TabbedSchema sch = it.next();
+            if (sch.getSchemaName().equalsIgnoreCase(schName)) {
+                return sch.model;
+            }
+        }
+        return null;
+    }
+    
+    public void setAcrossedSchemaForRelationship(Relationship r) {
+        if (r == null) return;
+        if (r.isAcrossed()) {
+            SQLSchema pkSchema = r.getSchema(true);
+            SQLSchema fkSchema = r.getSchema(false);
+            if (fkSchema == null) {
+                fkSchema = this.getSchemaByName(r.getModel().getFkSchemaName());
+            }
+            r.setAcrossedSchema(this.getAcrossedSchemaPane(fkSchema, pkSchema), 
+                    this.getAcrossedSchemaPane(pkSchema, fkSchema));
+        } else {
+            r.clearAcrossedSchema();
+        }
+    }
+    
+    private void addSourceTablesMapping(SQLTable source, SQLTable newTable) {
+        sourceTablesMapping.put(getFullName(source), newTable);
+    }
+    
+    private SQLTable findRelatedNewTable(SQLTable source) {
+        return sourceTablesMapping.get(getFullName(source));
+    }
+    
+    private String getFullName(SQLTable source) {
+        SQLObject so = source.getParent();
+        String fullName = source.getPhysicalName();
+        while (so != null && !(so instanceof SQLDatabase)) {
+            fullName = so.getPhysicalName() + "." + fullName;
+            if (so.getParent() instanceof SQLObject) {
+                so = (SQLObject)so.getParent();
+            } else {
+                so = null;
+            }
+        }
+        return fullName.toLowerCase();
+    }
 }

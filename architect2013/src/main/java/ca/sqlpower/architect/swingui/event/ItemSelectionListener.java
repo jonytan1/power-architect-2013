@@ -19,7 +19,9 @@
 
 package ca.sqlpower.architect.swingui.event;
 
-public interface ItemSelectionListener<T, C> {
+import ca.sqlpower.object.SPObject;
+
+public interface ItemSelectionListener<T extends SPObject, C> {
 
     void itemsSelected(ItemSelectionEvent<T, C> e);
     void itemsDeselected(ItemSelectionEvent<T, C> e);

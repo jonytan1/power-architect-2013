@@ -118,7 +118,8 @@ public abstract class AbstractPlacer extends MouseAdapter implements CancelableL
     public void dirtyup() {
         playpen.fireCancel();
         playpen.getCursorManager().placeModeStarted();
-        playpen.addMouseListener(this);
+        //playpen.addMouseListener(this);
+        playpen.addMouseListenerToSchema(this);
         playpen.addCancelableListener(this);
     }
 
@@ -129,7 +130,8 @@ public abstract class AbstractPlacer extends MouseAdapter implements CancelableL
      */
     private void cleanup() {
         playpen.removeCancelableListener(this);
-        playpen.removeMouseListener(this);
+        //playpen.removeMouseListener(this);
+        playpen.removeMouseListenerFromSchema(this);
         playpen.getCursorManager().placeModeFinished();
     }
     

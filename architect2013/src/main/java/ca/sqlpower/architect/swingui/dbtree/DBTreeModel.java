@@ -21,6 +21,7 @@ package ca.sqlpower.architect.swingui.dbtree;
 import java.beans.PropertyChangeEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,6 +42,7 @@ import javax.swing.tree.TreePath;
 
 import org.apache.log4j.Logger;
 
+import ca.sqlpower.object.AbstractSPListener;
 import ca.sqlpower.object.AbstractSPObject;
 import ca.sqlpower.object.SPChildEvent;
 import ca.sqlpower.object.SPListener;
@@ -58,7 +60,6 @@ import ca.sqlpower.sqlobject.SQLTable;
 import ca.sqlpower.sqlobject.SQLRelationship.SQLImportedKey;
 import ca.sqlpower.swingui.FolderNode;
 import ca.sqlpower.swingui.dbtree.DBTreeNodeRender;
-import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.TransactionEvent;
 
@@ -138,6 +139,55 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
         }
     }
     
+    private class MovingTableInfo {
+        private SQLObject oldParent;
+        private SQLObject newParent;
+        public MovingTableInfo() {}
+        public SQLObject getOldParent() {
+            return this.oldParent;
+        }
+        public void setOldParent(SQLObject oldParent) {
+            this.oldParent = oldParent;
+        }
+        public SQLObject getNewParent() {
+            return newParent;
+        }
+        public void setNewParent(SQLObject newParent) {
+            this.newParent = newParent;
+        }
+        public void clear() {
+            this.newParent = null;
+            this.oldParent = null;
+        }
+    }
+    
+    private Map<SQLTable, MovingTableInfo> movingTables = new HashMap<SQLTable, MovingTableInfo>(4);
+    
+    private MovingTableInfo getMoving(SPObject so) {
+        synchronized(movingTables) {
+            return movingTables.get(so);
+        }
+    }
+    
+    private MovingTableInfo setMoving(SPObject so, boolean isMoving) {
+        if (!(so instanceof SQLTable)) return null;
+        MovingTableInfo info = null;
+        if (isMoving) {
+            synchronized(movingTables) {
+                info = new MovingTableInfo();
+                movingTables.put((SQLTable)so, info);
+            }
+        } else {
+            synchronized(movingTables) {
+                info = movingTables.get(so);
+                if (info != null) {
+                    movingTables.remove(so);
+                }
+            }
+        }
+        return info;
+    }
+    
     /**
      * A {@link SPListener} implementation that will fire tree events as the underlying
      * objects change.
@@ -147,6 +197,9 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
         public void childAdded(SPChildEvent e) {
             if (!isSPObjectRelevant(e.getSource())) return;
             if (!isSPObjectRelevant(e.getChild())) return;
+            
+            // Table is moving from one schema to another schema.
+            if (getMoving(e.getChild()) != null) return;
             
             if (!root.getRunnableDispatcher().isForegroundThread()) 
                 throw new IllegalStateException("Adding a child " + e.getChild() + " to " + e.getSource() + 
@@ -186,6 +239,9 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
             if (!isSPObjectRelevant(e.getSource())) return;
             if (!isSPObjectRelevant(e.getChild())) return;
             
+            // Table is moving from one schema to another schema.
+            if (getMoving(e.getChild()) != null) return;
+
             if (!root.getRunnableDispatcher().isForegroundThread()) 
                 throw new IllegalStateException("Removing a child " + e.getChild() + " to " + e.getSource() + 
                         " not on the foreground thread.");
@@ -236,7 +292,25 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
                 return;
             }
             if (logger.isDebugEnabled()) logger.debug("dbObjectChanged SQLObjectEvent: "+e); //$NON-NLS-1$
-            processSQLObjectChanged(e);            
+            if (e.getSource() instanceof SQLTable ) {
+                if ("movingToAnotherSchema".equals(e.getPropertyName())) {
+                    boolean isMoving = (Boolean)e.getNewValue();
+                    MovingTableInfo info = setMoving((SQLTable)e.getSource(), isMoving);
+                    if (info != null && !isMoving) {
+                        refreshTreePathBySource(info.getOldParent());
+                        refreshTreePathBySource(info.getNewParent());
+                        info.clear();
+                    }
+                    return;
+                } else if ("schemaParent".equals(e.getPropertyName())) {
+                    MovingTableInfo info = getMoving((SQLTable)e.getSource());
+                    if (info == null) return;
+                    info.setOldParent((SQLObject)e.getOldValue());
+                    info.setNewParent((SQLObject)e.getNewValue());
+                    return;
+                }
+            }
+            processSQLObjectChanged(e);
         }
         
         /**
@@ -889,5 +963,15 @@ public class DBTreeModel implements TreeModel, java.io.Serializable {
      */
     public void refreshTreePath(TreePath tp) {
     	fireTreeStructureChanged(new TreeModelEvent(tp, tp));
+    }
+
+    /**
+     * Refresh the structure of the related TreePath of the source.
+     * @param source
+     */
+    private void refreshTreePathBySource(SQLObject source) {
+        if (source == null) return;
+        final TreeModelEvent parentEvent = new TreeModelEvent(this, getPathToNode(source));
+        fireTreeStructureChanged(parentEvent);
     }
 }

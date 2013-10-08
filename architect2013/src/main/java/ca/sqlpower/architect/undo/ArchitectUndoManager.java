@@ -52,6 +52,7 @@ public class ArchitectUndoManager extends SPObjectUndoManager implements Notifyi
         final ArchitectSwingProject workspace = playPen.getSession().getWorkspace();
         playPen.getContentPane().addSPListener(eventAdapter);
         eventAdapter.attachToObject(playPen.getContentPane());
+        playPen.initMirror(eventAdapter);
         SQLPowerUtils.listenToHierarchy(workspace.getSnapshotCollection(), eventAdapter);
         workspace.addSPListener(new AbstractSPListener() {
 

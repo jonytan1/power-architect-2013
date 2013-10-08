@@ -26,6 +26,7 @@ import javax.swing.JOptionPane;
 
 import ca.sqlpower.architect.swingui.ArchitectFrame;
 import ca.sqlpower.architect.swingui.Relationship;
+import ca.sqlpower.architect.swingui.RelationshipConnectible;
 import ca.sqlpower.architect.swingui.TablePane;
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
 
@@ -41,11 +42,11 @@ public class FocusToChildOrParentTableAction extends AbstractArchitectAction{
     public void actionPerformed(ActionEvent e) {
         List<Relationship> selection = getPlaypen().getSelectedRelationShips();
         if (selection.size() == 1) {
-            TablePane focusingTable;
+            RelationshipConnectible focusingTable;
             if(isToFocusParentTable) {
-                focusingTable = selection.get(0).getPkTable();
+                focusingTable = selection.get(0).getRelationshipConnectible(true);
             } else {
-                focusingTable = selection.get(0).getFkTable();
+                focusingTable = selection.get(0).getRelationshipConnectible(false);
             }
             getPlaypen().selectNone();
             focusingTable.setSelected(true, SelectionEvent.SINGLE_SELECT);
