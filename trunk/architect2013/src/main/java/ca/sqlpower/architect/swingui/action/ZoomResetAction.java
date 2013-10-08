@@ -54,6 +54,7 @@ public class ZoomResetAction extends AbstractArchitectAction implements Action {
 
     public void actionPerformed(ActionEvent e) {
         getPlaypen().setZoom(1.0);
+        getPlaypen().repaintCurrentSchema();
     }
 
 }

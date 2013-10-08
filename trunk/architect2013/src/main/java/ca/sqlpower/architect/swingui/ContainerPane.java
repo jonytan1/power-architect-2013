@@ -50,6 +50,7 @@ import ca.sqlpower.architect.swingui.PlayPen.MouseModeType;
 import ca.sqlpower.architect.swingui.event.ItemSelectionEvent;
 import ca.sqlpower.architect.swingui.event.ItemSelectionListener;
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
+import ca.sqlpower.object.SPObject;
 import ca.sqlpower.object.annotation.Accessor;
 import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonBound;
@@ -62,7 +63,7 @@ import ca.sqlpower.swingui.SPSUtils;
  * @param <T> Class of the model
  * @param <C> Class of the an item.
  */
-public abstract class ContainerPane<T, C>
+public abstract class ContainerPane<T extends SPObject, C>
 extends DraggablePlayPenComponent
 implements DragSourceListener, LayoutNode {
     
@@ -145,7 +146,9 @@ implements DragSourceListener, LayoutNode {
         p.translate(-getX(), -getY());
 
         if (evt.getID() == MouseEvent.MOUSE_CLICKED) {
+            logger.debug("handleMouseEvent --- MOUSE_CLICKED!");
             if (evt.getClickCount() == 1 && evt.getButton() == MouseEvent.BUTTON1){ 
+                logger.debug("evt.getClickCount()=" + evt.getClickCount() + ";MouseEvent.BUTTON1");
                 int selectedItemIndex = pointToItemIndex(p);
                 if(selectedItemIndex >= 0 && selectedItemIndex < getItems().size()) {
                     previousSelectedItem = getItems().get(selectedItemIndex);
@@ -164,6 +167,7 @@ implements DragSourceListener, LayoutNode {
                 }
             }
         } else if (evt.getID() == MouseEvent.MOUSE_PRESSED) {
+            logger.debug("handleMouseEvent --- MOUSE_PRESSED!");
             componentPreviouslySelected = false;
             int clickItem = pointToItemIndex(p);
 
@@ -234,6 +238,12 @@ implements DragSourceListener, LayoutNode {
                 setupDrag(p);
             }
         } else if (evt.getID() == MouseEvent.MOUSE_MOVED || evt.getID() == MouseEvent.MOUSE_DRAGGED) {
+            if (evt.getID() == MouseEvent.MOUSE_MOVED){
+                logger.debug("handleMouseEvent --- MOUSE_MOVED! rubberBand=" + pp.rubberBand);
+            } else {
+                logger.debug("handleMouseEvent --- MOUSE_DRAGGED rubberBand=" + pp.rubberBand);
+            }
+            
             setSelected(pp.rubberBand.intersects(getBounds(new Rectangle())),SelectionEvent.SINGLE_SELECT);
         }
     }

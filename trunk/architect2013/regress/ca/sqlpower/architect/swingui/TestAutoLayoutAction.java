@@ -32,6 +32,7 @@ import ca.sqlpower.architect.swingui.action.AutoLayoutAction;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLDatabase;
 import ca.sqlpower.sqlobject.SQLRelationship;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.sqlobject.SQLTable;
 
 public class TestAutoLayoutAction extends TestCase {
@@ -82,12 +83,13 @@ public class TestAutoLayoutAction extends TestCase {
 	public void testNoCrossingLinesEasy() throws SQLObjectException {
 		PlayPen pp = layoutAction.getPlayPen();
 		SQLDatabase ppdb = pp.getSession().getTargetDatabase();
+		SQLSchema ppschema = ppdb.getDefaultSchema();
 		
 		SQLTable tables[] = new SQLTable[4];
 		TablePane tablePanes[] = new TablePane[tables.length];
 		
 		for (int i = 0; i < tables.length; i++) {
-			tables[i] = new SQLTable(ppdb, "Table "+i, "", "TABLE", true);
+			tables[i] = new SQLTable(ppschema, "Table "+i, "", "TABLE", true);
 			tablePanes[i] = new TablePane(tables[i], pp.getContentPane());
 		}
 		

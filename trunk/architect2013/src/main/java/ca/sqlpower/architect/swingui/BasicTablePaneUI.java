@@ -32,33 +32,25 @@ import java.awt.Stroke;
 import java.awt.font.FontRenderContext;
 import java.beans.PropertyChangeEvent;
 import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import ca.sqlpower.architect.ddl.GenericDDLGenerator;
 import ca.sqlpower.sqlobject.SQLColumn;
-import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLTable;
-import ca.sqlpower.swingui.dbtree.DBTreeNodeRender.RenderType;
 import ca.sqlpower.swingui.dbtree.DBTreeNodeRenderUtils;
 
 public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializable {
-	private static Logger logger = Logger.getLogger(BasicTablePaneUI.class);
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -2129713773232585586L;
 
-	private static final GenericDDLGenerator ddlg;
-	static {
-        try {
-            ddlg = new GenericDDLGenerator(false);                    
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-	}
-	
+    private static Logger logger = Logger.getLogger(BasicTablePaneUI.class);
+
 	/**
 	 * The TablePane component that this UI delegate works for.
 	 */
@@ -476,16 +468,7 @@ public class BasicTablePaneUI extends TablePaneUI implements java.io.Serializabl
                             DBTreeNodeRenderUtils.getRenderType(tp.isUsingLogicalNames())));
             return fqn.toString();
         } else {
-        	SQLObject parent = tp.getModel().getParent();
-        	String parentName = (parent == null) ? null : parent.getName();
-        	if (parentName == null || parentName.trim().isEmpty()) {
-        		parentName = "";
-        	}
-        	else {
-        		parentName = parentName.trim() + ".";
-        	}
-            return parentName + tp.getModel().getTitleByRenderType(
-                    DBTreeNodeRenderUtils.getRenderType(tp.isUsingLogicalNames()));
+            return tp.getTitleOfPane();
         }
     }
 

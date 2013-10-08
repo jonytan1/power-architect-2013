@@ -33,6 +33,8 @@ import java.beans.PropertyChangeEvent;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import ca.sqlpower.architect.swingui.event.SelectionEvent;
 import ca.sqlpower.object.AbstractSPListener;
 import ca.sqlpower.object.SPLabel;
@@ -42,10 +44,13 @@ import ca.sqlpower.object.annotation.ConstructorParameter;
 import ca.sqlpower.object.annotation.ConstructorParameter.ParameterType;
 import ca.sqlpower.object.annotation.NonBound;
 import ca.sqlpower.object.annotation.NonProperty;
+import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.swingui.ColourScheme;
 
 public class PlayPenLabel extends DraggablePlayPenComponent {
 
+    private static final Logger logger = Logger.getLogger(PlayPenLabel.class);
+    
     public static final List<Class<? extends SPObject>> allowedChildTypes = 
         Collections.<Class<? extends SPObject>>singletonList(SPLabel.class);
     
@@ -162,7 +167,7 @@ public class PlayPenLabel extends DraggablePlayPenComponent {
     }
     
     @Override
-    public Object getModel() {
+    public SQLObject getModel() {
         return null;
     }
 
@@ -209,6 +214,7 @@ public class PlayPenLabel extends DraggablePlayPenComponent {
             }
             
             if (!pp.getSession().getArchitectFrame().createRelationshipIsActive()) {
+                logger.debug("handleMouseEvent--setupDrag");
                 setupDrag(p);
             }
         } else if (evt.getID() == MouseEvent.MOUSE_MOVED || evt.getID() == MouseEvent.MOUSE_DRAGGED) {

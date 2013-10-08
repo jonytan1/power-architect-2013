@@ -111,7 +111,7 @@ public class ZoomToFitAction extends AbstractArchitectAction {
 
         // When I get the playpen's animated zoom working properly, I'll change this to use it
         playpen.setZoom(zoom);
-        playpen.scrollRectToVisible(zoomBounds);
+        playpen.scrollRectToVisibleForSchema(zoomBounds);
     }
     
     /**
@@ -127,7 +127,7 @@ public class ZoomToFitAction extends AbstractArchitectAction {
         List<PlayPenComponent> fitThese = playpen.getSelectedItems();
         if (fitThese.isEmpty()) {
             fitThese = new ArrayList<PlayPenComponent>();
-            for (PlayPenComponent c : playpen.getContentPane().getChildren()) {
+            for (PlayPenComponent c : playpen.getChildrenOfActiveSchema()) {
                 fitThese.add(c);
             }
         }

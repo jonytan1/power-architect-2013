@@ -18,6 +18,7 @@
  */
 package ca.sqlpower.architect.swingui;
 
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
@@ -26,6 +27,7 @@ import java.beans.PropertyChangeEvent;
 import com.enterprisedt.util.debug.Logger;
 
 import ca.sqlpower.object.AbstractSPListener;
+import ca.sqlpower.sqlobject.SQLSchema;
 
 public abstract class RelationshipUI extends AbstractSPListener 
 implements PlayPenComponentUI, java.io.Serializable {
@@ -113,4 +115,11 @@ implements PlayPenComponentUI, java.io.Serializable {
                      +" from "+e.getOldValue()+" to "+e.getNewValue()+" on "+e.getSource());
         relationship.revalidate();
     }
+    
+    @Override
+    public void paint(Graphics2D g2) {
+        throw new RuntimeException("RelationshipUI don't support the method paint(Graphics2D g2). To call paint(SQLSchema currentSchema, Graphics2D g2) instead.");
+    }
+
+    public abstract void paint(SQLSchema currentSchema, Graphics2D g2);
 }

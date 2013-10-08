@@ -23,8 +23,9 @@ import java.util.Collections;
 import java.util.Set;
 
 import ca.sqlpower.architect.swingui.ContainerPane;
+import ca.sqlpower.object.SPObject;
 
-public class ItemSelectionEvent<T, C> {
+public class ItemSelectionEvent<T extends SPObject, C> {
 
     private final ContainerPane<T, C> source;
     private final Set<C> items;

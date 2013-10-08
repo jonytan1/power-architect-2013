@@ -47,6 +47,8 @@ public class CreatePlayPenSchemaAction extends AbstractArchitectAction {
 	private static final Logger logger = Logger.getLogger(CreatePlayPenSchemaAction.class);
 	
 	private final static String icon_name = "new_schema";
+	
+	private boolean success;
 
 	public CreatePlayPenSchemaAction(ArchitectFrame frame) {
         super(frame,
@@ -57,9 +59,22 @@ public class CreatePlayPenSchemaAction extends AbstractArchitectAction {
 	}
 
 	public void actionPerformed(ActionEvent evt) {
+	    SQLDatabase db = getSession().getTargetDatabase();
+	    db.begin("Create a schema");
+        singleActionPerformed(evt);
+        if (success) {
+            db.commit();
+        } else {
+            db.rollback("No input for schema name.");
+        }
+	}
+	
+	public void singleActionPerformed(ActionEvent evt) {
+	
         logger.debug("create playPen schema action detected!"); //$NON-NLS-1$
         logger.debug("ACTION COMMAND: " + evt.getActionCommand()); //$NON-NLS-1$
 
+        success = false;
         SQLDatabase db = getSession().getTargetDatabase();
         String schemaName = SQLDatabase.defaultSchemaName;
         ImageIcon icon = SPSUtils.createIcon(icon_name, Messages.getString("CreatePlayPenSchemaAction.name"), ArchitectSwingSessionContext.ICON_SIZE);
@@ -87,11 +102,13 @@ public class CreatePlayPenSchemaAction extends AbstractArchitectAction {
 		    					Messages.getString("Action.errorMessageDialogTitle"), 
 		    					JOptionPane.ERROR_MESSAGE);
 		    		} else {
-		    			input = ( db.getPlayPenSchema(schemaName) == null );
+		    			input = (db.getPlayPenSchema(schemaName) == null);
+		    			success = true;
 		    		}
 		        }
 	        } else {
 	        	input = false;
+	        	success = false;
 	        }
         }
 

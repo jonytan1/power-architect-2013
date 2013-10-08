@@ -255,6 +255,10 @@ public class SwingUIProjectLoader extends ProjectLoader {
         RelationalPlayPenFactory ppFactory = new RelationalPlayPenFactory();
         d.addFactoryCreate("architect-project/play-pen", ppFactory); //$NON-NLS-1$
         
+        // acrossed schema
+        AcrossedSchemaPaneFactory acrossedSchemaPaneFactory = new AcrossedSchemaPaneFactory();
+        d.addFactoryCreate("*/play-pen/acrossed-schema-pane", acrossedSchemaPaneFactory); //$NON-NLS-1$
+
         TablePaneFactory tablePaneFactory = new TablePaneFactory();
         d.addFactoryCreate("*/play-pen/table-pane", tablePaneFactory); //$NON-NLS-1$
         // factory will add the tablepanes to the playpen
@@ -466,6 +470,46 @@ public class SwingUIProjectLoader extends ProjectLoader {
         }
     }
     
+    private class AcrossedSchemaPaneFactory extends AbstractObjectCreationFactory {
+        public Object createObject(Attributes attributes) {
+            Object topItem = getDigester().peek();
+            if (!(topItem instanceof PlayPen)) {
+                logger.error("Expected parent PlayPen object on top of stack but found: " + topItem); //$NON-NLS-1$
+                throw new IllegalStateException("Parent PlayPen object not found!"); //$NON-NLS-1$
+            }
+            
+            PlayPen pp = (PlayPen) topItem;
+            int x = Integer.parseInt(attributes.getValue("x")); //$NON-NLS-1$
+            int y = Integer.parseInt(attributes.getValue("y")); //$NON-NLS-1$
+            SQLSchema model = (SQLSchema) sqlObjectLoadIdMap.get(attributes.getValue("schema-ref")); //$NON-NLS-1$
+            SQLSchema acrossedSchema = (SQLSchema) sqlObjectLoadIdMap.get(attributes.getValue("acrossed-schema-ref")); //$NON-NLS-1$
+            
+            AcrossedSchemaPane asp = pp.getAcrossedSchemaPane(model, acrossedSchema);
+            if (asp != null) {
+                String bgColorString = attributes.getValue("bgColor"); //$NON-NLS-1$
+                if (bgColorString != null) {
+                    Color bgColor = Color.decode(bgColorString);
+                    asp.setBackgroundColor(bgColor);
+                }
+                String fgColorString = attributes.getValue("fgColor"); //$NON-NLS-1$
+                if (fgColorString != null) {
+                    Color fgColor = Color.decode(fgColorString);
+                    asp.setForegroundColor(fgColor);
+                }
+                
+                boolean rounded = "true".equals(attributes.getValue("rounded")); //$NON-NLS-1$ //$NON-NLS-2$
+                asp.setRounded(rounded);
+                
+                boolean dashed = "true".equals(attributes.getValue("dashed")); //$NON-NLS-1$ //$NON-NLS-2$
+                asp.setDashed(dashed);
+                    
+                asp.setLocation(x, y);
+            }
+            
+            return asp;
+        }
+    }
+
     private class CubePaneFactory extends AbstractObjectCreationFactory {
         public Object createObject(Attributes attributes) {
             Object topItem = getDigester().peek();
@@ -1216,13 +1260,43 @@ public class SwingUIProjectLoader extends ProjectLoader {
     }
     
     private void savePlayPenComponents(PrintWriter out, PlayPen pp) {
-        List<PlayPenComponent> ppcs = new ArrayList<PlayPenComponent>(); 
+        List<PlayPenComponent> ppcs = new ArrayList<PlayPenComponent>();
         ppcs.addAll(pp.getContentPane().getChildren());
+        
+        // acrossedSchemas will be saved at first.
+        List<AcrossedSchemaPane> acrossedSchemas = pp.getContentPane().getChildren(AcrossedSchemaPane.class);
+        ppcs.removeAll(acrossedSchemas);
+        ppcs.addAll(acrossedSchemas);
         Collections.reverse(ppcs);
         
         // save the container panes.
         for (PlayPenComponent ppc : ppcs) {
-            if (ppc instanceof TablePane) {
+            if (ppc instanceof AcrossedSchemaPane) {
+                AcrossedSchemaPane asp = (AcrossedSchemaPane) ppc;
+                Point p = asp.getLocation();
+                
+                if (sqlObjectSaveIdMap.get(asp.getModel()) == null || sqlObjectSaveIdMap.get(asp.getAcrossedSchema()) == null) {
+                    logger.error("Play pen tried to save a table pane at " + asp.getX() + ", " + asp.getY() + " with the model " + 
+                            asp.getModel() + " and reference id " + sqlObjectSaveIdMap.get(asp.getModel()) + 
+                            ", and the acrossed schema " + asp.getAcrossedSchema() + " and reference id " + 
+                            sqlObjectSaveIdMap.get(asp.getAcrossedSchema()) + "." +
+                            "\nSaving a table pane with a null reference will cause an NPE on loading.");
+                    throw new NullPointerException("Play pen table is saving a null reference.");
+                }
+                
+                Color bgColor = asp.getBackgroundColor();
+                String bgColorString = String.format("0x%02x%02x%02x", bgColor.getRed(), bgColor.getGreen(), bgColor.getBlue()); //$NON-NLS-1$
+                Color fgColor = asp.getForegroundColor();
+                String fgColorString = String.format("0x%02x%02x%02x", fgColor.getRed(), fgColor.getGreen(), fgColor.getBlue()); //$NON-NLS-1$
+                
+                ioo.println(out, "<acrossed-schema-pane schema-ref="+quote(sqlObjectSaveIdMap.get(asp.getModel()))  //$NON-NLS-1$
+                        + " acrossed-schema-ref="+quote(sqlObjectSaveIdMap.get(asp.getAcrossedSchema()))  //$NON-NLS-1$
+                        +" x=\""+p.x+"\" y=\""+p.y+"\" bgColor="+ quote(bgColorString) + " fgColor=" + quote(fgColorString) + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+                        " rounded=\"" + asp.isRounded() + "\" dashed=\"" + asp.isDashed() + "\"/>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                if (pm != null) {
+                    pm.setProgress(++progress);
+                }
+            } else if (ppc instanceof TablePane) {
                 TablePane tp = (TablePane) ppc;
                 Point p = tp.getLocation();
                 
@@ -1292,7 +1366,8 @@ public class SwingUIProjectLoader extends ProjectLoader {
                         +" rLineColor="+quote(rColorString) //$NON-NLS-1$
                         +" pkLabelText="+quote(r.getTextForParentLabel()) //$NON-NLS-1$
                         +" fkLabelText="+quote(r.getTextForChildLabel()) //$NON-NLS-1$
-                        +" orientation=\"" + r.getOrientation() + "\"/>"); //$NON-NLS-1$ //$NON-NLS-2$
+                        +" orientation=\"" + r.getOrientation() + "\"" //$NON-NLS-1$ //$NON-NLS-2$
+                        +" orientationAcrossed=\"" + r.getOrientationAcrossed() + "\"/>"); //$NON-NLS-1$ //$NON-NLS-2$
             } else if (ppc instanceof UsageComponent) {
                 UsageComponent usageComp = (UsageComponent) ppc;
                 String modelId = olapObjectSaveIdMap.get(usageComp.getModel());

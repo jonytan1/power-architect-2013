@@ -89,9 +89,9 @@ public class ZoomAction extends AbstractArchitectAction {
 		getPlaypen().setZoom(getPlaypen().getZoom() * Math.pow(2,zoomStep));
 		logger.debug("newZoom="+getPlaypen().getZoom()); //$NON-NLS-1$
 		Rectangle scrollTo = null;
-		Iterator it = getPlaypen().getSelectedItems().iterator();
+		Iterator<PlayPenComponent> it = getPlaypen().getSelectedItems().iterator();
 		while (it.hasNext()) {
-			Rectangle bounds = ((PlayPenComponent) it.next()).getBounds();
+			Rectangle bounds = it.next().getBounds();
 			logger.debug("new rectangle, bounds: " + bounds); //$NON-NLS-1$
 			if (scrollTo == null) {
 				scrollTo = new Rectangle(bounds);
@@ -102,7 +102,8 @@ public class ZoomAction extends AbstractArchitectAction {
 		}
 		if (scrollTo != null && !scrollTo.isEmpty()) {
 			getPlaypen().zoomRect(scrollTo);
-			getPlaypen().scrollRectToVisible(scrollTo);
+			getPlaypen().scrollRectToVisibleForSchema(scrollTo);
+			return;
 		}
 	}
 }

@@ -1315,7 +1315,7 @@ public class DBTree extends JTree implements DragSourceListener {
                             SQLTable table = (SQLTable) oo;
                             if (!table.getParentDatabase().isPlayPenDatabase()) 
                                 throw new SQLObjectException("The moved table (" + table.getName() + ") is not belong to PlayPenDatabase.");
-                            table.moveToAnotherSchema(targetSchema);
+                            table.changeSchemaParent(targetSchema);
                         } else {
                             logger.error("Unknown object moved in Schema: "+oo); //$NON-NLS-1$
                             throw new SQLObjectException("The moved object (" + oo.getName() + ") is not table.");
@@ -1326,6 +1326,7 @@ public class DBTree extends JTree implements DragSourceListener {
                     return true;
                 } catch (Throwable e) {
                     targetSchema.rollback("Error occurred: " + e.toString());
+                    e.printStackTrace();
                     throw new RuntimeException(e);
                 }
             }

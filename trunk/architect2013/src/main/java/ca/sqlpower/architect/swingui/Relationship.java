@@ -21,6 +21,7 @@ package ca.sqlpower.architect.swingui;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
@@ -58,10 +59,12 @@ import ca.sqlpower.object.annotation.Constructor;
 import ca.sqlpower.object.annotation.ConstructorParameter;
 import ca.sqlpower.object.annotation.Mutator;
 import ca.sqlpower.object.annotation.NonBound;
+import ca.sqlpower.object.annotation.NonProperty;
 import ca.sqlpower.object.annotation.Transient;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLRelationship;
 import ca.sqlpower.sqlobject.SQLRelationship.ColumnMapping;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.swingui.ColorIcon;
 import ca.sqlpower.swingui.ColourScheme;
 import ca.sqlpower.util.TransactionEvent;
@@ -92,6 +95,35 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 	private TablePane fkTable;
 	
 	/**
+	 * Weather this component is initialized completely.
+	 */
+	private boolean initCompleted = false;
+	
+	// ---------------variables definition for relationship that crosses two schemas.----------------------------
+	/**
+     * The object instead of pkTable to draw the line of relationship under the 
+     * tab schema of playpen that fkTable belongs to.
+	 */
+	private AcrossedSchemaPane pkAcrossedSchema;
+    /**
+     * The object instead of fkTable to draw the line of relationship under the 
+     * tab schema of playpen that pkTable belongs to.
+     */
+    private AcrossedSchemaPane fkAcrossedSchema;
+    /**
+     * Weather the schema that pkTable belongs to is the current schema under PlayPen.
+     */
+    private SQLSchema currentSchema;
+    /**
+     * A bitmask of the constants (PARENT|CHILD)_FACES_(LEFT|RIGHT|TOP|BOTTOM)
+     * for the PlayPen's tab schema pane that the fkTable belongs to when 
+     * this relationship crosses two schemas.
+     */
+    protected int orientationAcrossed;
+    
+    // ---------------end of variables definition for relationship that crosses two schemas.----------------------------
+	
+	/**
 	 * This represents a percentage of how far along one of the sides the connection
 	 * to the primary key table should be drawn.
 	 */
@@ -107,7 +139,7 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
      * A bitmask of the constants (PARENT|CHILD)_FACES_(LEFT|RIGHT|TOP|BOTTOM).
      */
     protected int orientation;
-
+    
     public static final int NO_FACING_EDGES = 0;
     public static final int PARENT_FACES_RIGHT = 1;
     public static final int PARENT_FACES_LEFT = 2;
@@ -125,6 +157,8 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 	private boolean selected;
 	
 	private final TablePaneBehaviourListener tpbListener = new TablePaneBehaviourListener();
+
+    private final AcrossedSchemaPaneBehaviourListener aspbListener = new AcrossedSchemaPaneBehaviourListener();
 
     /**
 	 * The colour to highlight related columns with when this relationship is selected.
@@ -151,7 +185,7 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
              repaint();
          }
       };
- 
+
     /**
      * This constructor is only for making a copy of an existing relationship component.
      * It is not useful in general, and it doesn't even produce a fully-functional copy.
@@ -175,7 +209,11 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 		this.foregroundColor = r.getForegroundColor();
 		this.backgroundColor = r.getBackgroundColor();
 		
-		this.orientation = r.getOrientation();
+		this.orientation = r.orientation;
+		
+		// for the relationship that crosses two schemas.
+		this.orientationAcrossed = r.orientationAcrossed;
+		this.currentSchema = contentPane.getPlayPen().getModelOfCurrentTab();
 		
 		if (isMagicEnabled() != r.isMagicEnabled()) {
 		    setMagicEnabled(r.isMagicEnabled());
@@ -190,6 +228,7 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 		} catch (IllegalAccessException e) {
 			throw new RuntimeException("Woops, couldn't access no-args constructor of "+r.getUI().getClass().getName()); //$NON-NLS-1$
 		}
+		init();
 	}
 	
 	/**
@@ -205,7 +244,7 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 	public Relationship(SQLRelationship model, TablePane pkTable, 
 	        TablePane fkTable, PlayPenContentPane parent) 
 	throws SQLObjectException {
-	    this (model, pkTable, fkTable, parent, 0, 0, 0);	    
+	    this (model, pkTable, fkTable, parent, 0, 0, 0, 0);	    
 	}
 
 	@Constructor
@@ -215,7 +254,8 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 	        @ConstructorParameter(propertyName="parent") PlayPenContentPane parent,
 	        @ConstructorParameter(propertyName="pkConnection") double pkConnection,
 	        @ConstructorParameter(propertyName="fkConnection") double fkConnection,
-	        @ConstructorParameter(propertyName="orientation") int orientation) 
+            @ConstructorParameter(propertyName="orientation") int orientation,
+	        @ConstructorParameter(propertyName="orientationAcrossed") int orientationAcrossed) 
 	throws SQLObjectException {
 	    super(model.getName());
 		this.model = model;
@@ -224,8 +264,12 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
         this.pkConnection = pkConnection;
         this.fkConnection = fkConnection;
 		this.orientation = orientation;
+		this.orientationAcrossed = orientationAcrossed;
 		setParent(parent);
+		this.currentSchema = parent.getPlayPen().getModelOfCurrentTab();
         setup();
+
+        this.init();
 	}
 
 	/**
@@ -283,6 +327,11 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
         if (logger.isDebugEnabled()) {
             popup.addSeparator();
             mi = new JMenuItem(new AbstractAction("Show Mappings") {
+                /**
+                 * 
+                 */
+                private static final long serialVersionUID = -8322133344548739211L;
+
                 public void actionPerformed(ActionEvent e) {
                     StringBuffer componentList = new StringBuffer();
                     
@@ -320,8 +369,14 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
         if (pkTable != null) {
             pkTable.addSPListener(tpbListener);
         }
+        if (this.pkAcrossedSchema != null) {
+            this.pkAcrossedSchema.addSPListener(aspbListener);
+        }
         if (fkTable != null) {
             fkTable.addSPListener(tpbListener);
+        }
+        if (this.fkAcrossedSchema != null) {
+            this.fkAcrossedSchema.addSPListener(aspbListener);
         }
         getParent().addSPListener(containerPaneListener);
         
@@ -338,8 +393,14 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 	    if (pkTable != null) {
             pkTable.removeSPListener(tpbListener);
         }
+        if (this.pkAcrossedSchema != null) {
+            this.pkAcrossedSchema.removeSPListener(aspbListener);
+        }
         if (fkTable != null) {
             fkTable.removeSPListener(tpbListener);
+        }
+        if (this.fkAcrossedSchema != null) {
+            this.fkAcrossedSchema.removeSPListener(aspbListener);
         }
 	    getParent().removeSPListener(containerPaneListener);
 	    
@@ -424,7 +485,7 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 	public void setFkTable(TablePane tp) {
 	    TablePane oldFk = fkTable;
 		if (fkTable != null) {
-			fkTable.removeSPListener(tpbListener);			
+			fkTable.removeSPListener(tpbListener);
 		}
 		fkTable = tp;
 		fkTable.addSPListener(tpbListener);
@@ -432,6 +493,32 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 		// XXX: update model?
 	}
 
+	private void init() {
+	    initCompleted = true;
+	    resetAcrossedPane();
+	}
+	
+	/**
+	 * Reset the SPListner for acrossed pane.
+	 */
+	private void resetAcrossedPane() {
+	    if (!initCompleted) return;
+	    
+	    if (this.pkAcrossedSchema != null) {
+	        this.pkAcrossedSchema.removeAcrossedSchemaRelationship(this);
+	    }
+        if (this.fkAcrossedSchema != null) {
+            this.fkAcrossedSchema.removeAcrossedSchemaRelationship(this);
+        }
+        getPlayPen().setAcrossedSchemaForRelationship(this);
+        if (this.pkAcrossedSchema != null) {
+            this.pkAcrossedSchema.addAcrossedSchemaRelationship(this, true);
+        }
+        if (this.fkAcrossedSchema != null) {
+            this.fkAcrossedSchema.addAcrossedSchemaRelationship(this, false);
+        }
+	}
+	
 	@Accessor
 	public TablePane getFkTable() {
 		return fkTable;
@@ -454,13 +541,13 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
     public BasicRelationshipUI.ImmutablePoint createPkConnectionPoint() {
         
         Point p;
-        TablePane pane = getPkTable();
+        RelationshipConnectible pane = getRelationshipConnectible(true);
         
-        if((getOrientation() & PARENT_FACES_BOTTOM) != 0)
+        if((getOrientation2() & PARENT_FACES_BOTTOM) != 0)
             p = new Point((int)(pane.getWidth() * getPkConnection()), pane.getHeight());
-        else if((getOrientation() & PARENT_FACES_TOP) != 0)
+        else if((getOrientation2() & PARENT_FACES_TOP) != 0)
             p = new Point((int)(pane.getWidth() * getPkConnection()), 0);
-        else if((getOrientation() & PARENT_FACES_LEFT) != 0)
+        else if((getOrientation2() & PARENT_FACES_LEFT) != 0)
             p = new Point(0, (int)(pane.getHeight() * getPkConnection()));
         else
             p = new Point(pane.getWidth(), (int)(pane.getHeight() * getPkConnection()));
@@ -475,13 +562,13 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
     public BasicRelationshipUI.ImmutablePoint createFkConnectionPoint() {
         
         Point p;
-        TablePane pane = getFkTable();
+        RelationshipConnectible pane = getRelationshipConnectible(false);
         
-        if((getOrientation() & CHILD_FACES_BOTTOM) != 0)
+        if((getOrientation2() & CHILD_FACES_BOTTOM) != 0)
             p = new Point((int)(pane.getWidth() * getFkConnection()), pane.getHeight());
-        else if((getOrientation() & CHILD_FACES_TOP) != 0)
+        else if((getOrientation2() & CHILD_FACES_TOP) != 0)
             p = new Point((int)(pane.getWidth() * getFkConnection()), 0);
-        else if((getOrientation() & CHILD_FACES_LEFT) != 0)
+        else if((getOrientation2() & CHILD_FACES_LEFT) != 0)
             p = new Point(0, (int)(pane.getHeight() * getFkConnection()));
         else
             p = new Point(pane.getWidth(), (int)(pane.getHeight() * getFkConnection()));
@@ -495,14 +582,14 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
     @Transient
     @Mutator
     public void setFkConnectionPoint(Point p) {
-        if((getOrientation() & CHILD_FACES_BOTTOM) != 0)
-            setFkConnection(p.getX() / getFkTable().getWidth());
-        else if((getOrientation() & CHILD_FACES_TOP) != 0)
-            setFkConnection(p.getX() / getFkTable().getWidth());
-        else if((getOrientation() & CHILD_FACES_LEFT) != 0)
-            setFkConnection(p.getY() / getFkTable().getHeight());
+        if((getOrientation2() & CHILD_FACES_BOTTOM) != 0)
+            setFkConnection(p.getX() / getRelationshipConnectible(false).getWidth());
+        else if((getOrientation2() & CHILD_FACES_TOP) != 0)
+            setFkConnection(p.getX() / getRelationshipConnectible(false).getWidth());
+        else if((getOrientation2() & CHILD_FACES_LEFT) != 0)
+            setFkConnection(p.getY() / getRelationshipConnectible(false).getHeight());
         else
-            setFkConnection(p.getY() / getFkTable().getHeight());
+            setFkConnection(p.getY() / getRelationshipConnectible(false).getHeight());
     }
     
     /**
@@ -511,14 +598,14 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
     @Transient
     @Mutator
     public void setPkConnectionPoint(Point p) {
-        if((getOrientation() & PARENT_FACES_BOTTOM) != 0)
-            setPkConnection(p.getX() / getPkTable().getWidth());
-        else if((getOrientation() & PARENT_FACES_TOP) != 0)
-            setPkConnection(p.getX() / getPkTable().getWidth());
-        else if((getOrientation() & PARENT_FACES_LEFT) != 0)
-            setPkConnection(p.getY() / getPkTable().getHeight());
+        if((getOrientation2() & PARENT_FACES_BOTTOM) != 0)
+            setPkConnection(p.getX() / getRelationshipConnectible(true).getWidth());
+        else if((getOrientation2() & PARENT_FACES_TOP) != 0)
+            setPkConnection(p.getX() / getRelationshipConnectible(true).getWidth());
+        else if((getOrientation2() & PARENT_FACES_LEFT) != 0)
+            setPkConnection(p.getY() / getRelationshipConnectible(true).getHeight());
         else
-            setPkConnection(p.getY() / getPkTable().getHeight());
+            setPkConnection(p.getY() / getRelationshipConnectible(true).getHeight());
     }
 	
     /**
@@ -576,15 +663,63 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
                     newVal = (Point) evt.getNewValue();
                 }
                 if(oldVal.x != newVal.x || oldVal.y != newVal.y) {
-                    logger.debug("Component "+((PlayPenComponent)(evt.getSource())).getName()+" changed"); //$NON-NLS-1$ //$NON-NLS-2$
-                    if (((PlayPenComponent)(evt.getSource())) == pkTable || ((PlayPenComponent)(evt.getSource())) == fkTable) {
-                        ((BasicRelationshipUI) getUI()).revalidate();
+                    if (evt.getSource() instanceof RelationshipConnectible) {
+                        RelationshipConnectible rc = (RelationshipConnectible)(evt.getSource());
+                        logger.debug("Component "+((PlayPenComponent)(evt.getSource())).getName()+" changed"); //$NON-NLS-1$ //$NON-NLS-2$
+                        if (isRelatedRelationshipConnectible(rc)) {
+                            ((BasicRelationshipUI) getUI()).revalidate();
+                        }
                     }
                 }
-            }     
+            } else if ("model.schemaParent".equals(evt.getPropertyName())) {
+                if (evt.getSource() instanceof TablePane) {
+                    boolean magicEnabled = ((TablePane)evt.getSource()).getModel().isMagicEnabled();
+                    final Relationship r = Relationship.this;
+                    if (!magicEnabled) {
+                        r.setMagicEnabled(false);
+                    }
+                    r.resetAcrossedPane();
+                    if (!magicEnabled) {
+                        r.setMagicEnabled(true);
+                    }
+                }
+            }
         }
 	}
 	
+    // ---------------- Component Listener ----------------
+    private class AcrossedSchemaPaneBehaviourListener extends AbstractSPListener {
+
+        public void propertyChanged(PropertyChangeEvent evt) {
+            /* (non-Javadoc)
+             * @see ca.sqlpower.architect.swingui.PlayPenComponentListener#componentResized(ca.sqlpower.architect.swingui.PlayPenComponentEvent)
+             */
+            if ((evt.getPropertyName().equals("topLeftCorner") || (evt.getPropertyName().equals("lengths")))) {
+                logger.debug("Component "+((PlayPenComponent)(evt.getSource())).getName()+" changed size"); //$NON-NLS-1$ //$NON-NLS-2$
+                
+                Point oldVal;
+                Point newVal;
+                if (evt.getPropertyName().equals("lengths")) {
+                    Dimension oldDim = (Dimension) evt.getOldValue();
+                    Dimension newDim = (Dimension) evt.getNewValue();
+                    oldVal = new Point(oldDim.width, oldDim.height);
+                    newVal = new Point(newDim.width, newDim.height);
+                } else {
+                    oldVal = (Point) evt.getOldValue();
+                    newVal = (Point) evt.getNewValue();
+                }
+                if(oldVal.x != newVal.x || oldVal.y != newVal.y) {
+                    if (evt.getSource() instanceof RelationshipConnectible) {
+                        RelationshipConnectible rc = (RelationshipConnectible)(evt.getSource());
+                        logger.debug("Component "+((PlayPenComponent)(evt.getSource())).getName()+" changed"); //$NON-NLS-1$ //$NON-NLS-2$
+                        if (isRelatedRelationshipConnectible(rc)) {
+                            ((BasicRelationshipUI) getUI()).revalidate();
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 
 	/**
@@ -614,8 +749,8 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 			this.startingPk = new Point(r.createPkConnectionPoint().getX(), r.createPkConnectionPoint().getY());
 			this.startingFk = new Point(r.createFkConnectionPoint().getX(), r.createFkConnectionPoint().getY());
 			r.startedDragging();
-			r.getPlayPen().addMouseMotionListener(this);
-			r.getPlayPen().addMouseListener(this);
+			r.getPlayPen().addMouseMotionListenerToSchema(this);
+			r.getPlayPen().addMouseListenerToSchema(this);
 			r.getPlayPen().setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
 		}
 
@@ -653,12 +788,12 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 		 */
 		protected Point translatePoint(Point p) {
 			if (movingPk) {
-				p.x = p.x - r.getPkTable().getX();
-				p.y = p.y - r.getPkTable().getY();
+				p.x = p.x - r.getRelationshipConnectible(true).getX();
+				p.y = p.y - r.getRelationshipConnectible(true).getY();
 				p = ((RelationshipUI) r.getUI()).closestEdgePoint(movingPk, p);
 			} else {
-				p.x = p.x - r.getFkTable().getX();
-				p.y = p.y - r.getFkTable().getY();
+				p.x = p.x - r.getRelationshipConnectible(false).getX();
+				p.y = p.y - r.getRelationshipConnectible(false).getY();
 				p = ((RelationshipUI) r.getUI()).closestEdgePoint(movingPk, p);
 			}
 			return p;
@@ -670,8 +805,8 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 		 * instance's creator saved a reference).
 		 */
 		public void mouseReleased(MouseEvent e) {
-			r.getPlayPen().removeMouseMotionListener(this);
-			r.getPlayPen().removeMouseListener(this);
+			r.getPlayPen().removeMouseMotionListenerFromSchema(this);
+			r.getPlayPen().removeMouseListenerFromSchema(this);
 			r.getPlayPen().setCursor(null);
 			r.doneDragging();
 		}
@@ -692,7 +827,7 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
 	public void childAdded(SPChildEvent e) {
         if (isSelected()) {
             SQLRelationship.ColumnMapping cm = (ColumnMapping) e.getChild();
-            pkTable.addColumnHighlight(cm.getPkColumn(), columnHighlightColour); 
+            pkTable.addColumnHighlight(cm.getPkColumn(), columnHighlightColour);
             fkTable.addColumnHighlight(cm.getFkColumn(), columnHighlightColour);
         }
 	}
@@ -879,4 +1014,225 @@ public class Relationship extends PlayPenComponent implements SPListener, Layout
             throw new IllegalArgumentException("This Relationship is not dependant on " + dependency);
         }
     }
+
+    @Override
+    public void paint(Graphics2D g2) {
+        throw new RuntimeException("RelationshipUI don't support the method paint(Graphics2D g2). To call paint(SQLSchema currentSchema, Graphics2D g2) instead.");
+    }
+    
+    /**
+     * 
+     * @param currentSchema
+     * @param g2
+     */
+    public void paint(SQLSchema currentSchema, Graphics2D g2) {
+        setCurrentSchemaUnderPlayPen(currentSchema);
+        ((RelationshipUI)getUI()).paint(currentSchema, g2);
+        if (logger.isDebugEnabled()) {
+            Color oldColor = g2.getColor();
+            g2.setColor(Color.ORANGE);
+            g2.drawRect(0, 0, getWidth(), getHeight());
+            g2.setColor(oldColor);
+        }
+    }
+    
+    @NonProperty
+    public boolean isAcrossed() {
+        return this.model.isAcrossedSchema();
+    }
+    
+    /**
+     * Get the SQLSchema of SQLRelation's pkTable / fkTable.
+     * @param isPk
+     * @return
+     */
+    @NonProperty
+    public SQLSchema getSchema(boolean isPk) {
+        return this.model.getSchema(isPk);
+    }
+    
+    /**
+     * Whether sch is same to the schema of SQLRelation's fkTable.
+     * @return
+     */
+    @NonProperty
+    public boolean sameFkSchema(SQLSchema sch) {
+        if (sch == null) return false;
+        SQLSchema fkSchema = this.model.getSchema(false);
+        if (fkSchema == sch) return true;
+        if (fkSchema == null) {
+            return sch.getName().equalsIgnoreCase(this.model.getFkSchemaName());
+        }
+        return false;
+    }
+
+    /**
+     * Set the object instead of pkTable and fkTable to draw the line of relationship under the 
+     * tab schema of playpen that fkTable/pkTable belongs to, when this relationship 
+     * across two schemas.
+     * @param pkAcrossedSchema      this object will display in the fkTable's tab schema of PlayPen.
+     * @param fkAcrossedSchema      this object will display in the pkTable's tab schema of PlayPen.
+     */
+    @NonProperty
+    public void setAcrossedSchema(AcrossedSchemaPane pkAcrossedSchema, 
+            AcrossedSchemaPane fkAcrossedSchema) {
+        if (pkAcrossedSchema == null || fkAcrossedSchema == null) {
+            throw new RuntimeException("The two acrossedSchemas should be not null.");
+        }
+        AcrossedSchemaPane oldPk = this.pkAcrossedSchema;
+        AcrossedSchemaPane oldFk = this.fkAcrossedSchema;
+
+        disconnectAcrossedSchema();
+        
+        this.pkAcrossedSchema = pkAcrossedSchema;
+        this.fkAcrossedSchema = fkAcrossedSchema;
+        this.pkAcrossedSchema.addSPListener(aspbListener);
+        this.fkAcrossedSchema.addSPListener(aspbListener);
+        firePropertyChange("pkAcrossedSchema", oldPk, pkAcrossedSchema);
+        firePropertyChange("fkAcrossedSchema", oldFk, fkAcrossedSchema);
+    }
+    
+    public void clearAcrossedSchema() {
+        AcrossedSchemaPane oldPk = this.pkAcrossedSchema;
+        AcrossedSchemaPane oldFk = this.fkAcrossedSchema;
+
+        disconnectAcrossedSchema();
+        this.pkAcrossedSchema = null;
+        this.fkAcrossedSchema = null;
+        firePropertyChange("pkAcrossedSchema", oldPk, pkAcrossedSchema);
+        firePropertyChange("fkAcrossedSchema", oldFk, fkAcrossedSchema);
+    }
+
+    /**
+     * Unregister the Listeners for the "topLeftCorner" and "lengths" changes of AcrossedSchemaPane.
+     */
+    private void disconnectAcrossedSchema() {
+        if (this.pkAcrossedSchema != null) {
+            this.pkAcrossedSchema.removeSPListener(aspbListener);
+        }
+        if (this.fkAcrossedSchema != null) {
+            this.fkAcrossedSchema.removeSPListener(aspbListener);
+        }
+    }
+    
+    @NonProperty
+    public RelationshipConnectible getRelationshipConnectible(boolean isPk) {
+        if (isPk) {
+            return (usePkAcrossedSchema() ? this.pkAcrossedSchema : this.pkTable);
+        }
+        return (useFkAcrossedSchema() ? this.fkAcrossedSchema : this.fkTable);
+    }
+    
+    private boolean usePkAcrossedSchema() {
+        if (this.pkAcrossedSchema != null && this.isAcrossed() && !isPkSchemaOfPlayPen()) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean useFkAcrossedSchema() {
+        if (this.fkAcrossedSchema != null && this.isAcrossed() && isPkSchemaOfPlayPen()) {
+            return true;
+        }
+        return false;
+    }
+
+    @NonProperty
+    public boolean isSelfRelationship() {
+        return (this.pkTable == this.fkTable);
+    }
+    
+    @NonProperty
+    private void setCurrentSchemaUnderPlayPen(SQLSchema schema) {
+        this.currentSchema = schema;
+    }
+    
+    /**
+     * Returns the current orientation of this relationship for current tab schema 
+     * pane of PlayPen; that is, which sides of its PK table and its FK table it is 
+     * attached to. The return value is a bitmask of the constants
+     * (PARENT|CHILD)_FACES_(LEFT|RIGHT|TOP|BOTTOM).
+     * @return
+     */
+    @NonProperty
+    public int getOrientation2() {
+        if (isPkSchemaOfPlayPen() || !this.isAcrossed()) {
+            return this.orientation;
+        }
+        return (this.fkAcrossedSchema != null) ? this.orientationAcrossed : this.orientation;
+    }
+
+    /**
+     * Set the current orientation of this relationship for current tab schema 
+     * pane of PlayPen; that is, which sides of its PK table and its FK table it is 
+     * attached to. This value is a bitmask of the constants
+     * (PARENT|CHILD)_FACES_(LEFT|RIGHT|TOP|BOTTOM).
+     * @param orientation
+     */
+    @NonProperty
+    public void setOrientation2(int orientation) {
+        if (isPkSchemaOfPlayPen() || !this.isAcrossed()) {
+            this.setOrientation(orientation);
+            return;
+        }
+        if (this.fkAcrossedSchema != null) {
+            this.setOrientationAcrossed(orientation);
+            return;
+        }
+    }
+    
+    private boolean isRelatedRelationshipConnectible(RelationshipConnectible rc) {
+        if (rc == null) return false;
+        if (rc ==pkTable || rc == fkTable) return true;
+        if (rc == pkAcrossedSchema || rc == fkAcrossedSchema) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isPkSchemaOfPlayPen() {
+        logger.debug("currentSchema=" + this.currentSchema + "; pkSchema=" + this.model.getSchema(true) + 
+                "; fkSchema=" + this.model.getSchema(false) + "; isPkSchemaOfPlayPen=" + 
+                (this.currentSchema == this.model.getSchema(true)) + "; isAcrossed=" + isAcrossed() + 
+                "; pkAcrossedSchema=" + pkAcrossedSchema + "; fkAcrossedSchema=" + fkAcrossedSchema);
+        return (this.currentSchema == this.model.getSchema(true));
+    }
+    
+    @Transient @Accessor
+    public int getOrientationAcrossed() {
+        return orientationAcrossed;
+    }
+
+    @Transient @Mutator
+    public void setOrientationAcrossed(int orientationAcrossed) {
+        int oldValue = this.orientationAcrossed;
+        if (oldValue == orientationAcrossed) return;
+        this.orientationAcrossed = orientationAcrossed;
+        firePropertyChange("orientationAcrossed", oldValue, orientationAcrossed);
+    }
+    
+    public Color getHighlightColor() {
+        return (this.selected ? this.columnHighlightColour : null);
+    }
+
+    @Transient @Accessor
+    public AcrossedSchemaPane getPkAcrossedSchema() {
+        return pkAcrossedSchema;
+    }
+
+    @Transient @Mutator
+    public void setPkAcrossedSchema(AcrossedSchemaPane pkAcrossedSchema) {
+        this.pkAcrossedSchema = pkAcrossedSchema;
+    }
+
+    @Transient @Accessor
+    public AcrossedSchemaPane getFkAcrossedSchema() {
+        return fkAcrossedSchema;
+    }
+
+    @Transient @Mutator
+    public void setFkAcrossedSchema(AcrossedSchemaPane fkAcrossedSchema) {
+        this.fkAcrossedSchema = fkAcrossedSchema;
+    }
+    
 }

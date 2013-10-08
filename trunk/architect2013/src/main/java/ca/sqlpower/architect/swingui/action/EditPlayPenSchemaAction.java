@@ -28,9 +28,11 @@ import javax.swing.tree.TreePath;
 
 import org.apache.log4j.Logger;
 
+import ca.sqlpower.architect.swingui.AcrossedSchemaPane;
 import ca.sqlpower.architect.swingui.ArchitectFrame;
 import ca.sqlpower.architect.swingui.ArchitectSwingSessionContext;
 import ca.sqlpower.architect.swingui.DBTree;
+import ca.sqlpower.architect.swingui.PlayPen;
 import ca.sqlpower.sqlobject.SQLDatabase;
 import ca.sqlpower.sqlobject.SQLObject;
 import ca.sqlpower.sqlobject.SQLSchema;
@@ -51,6 +53,8 @@ public class EditPlayPenSchemaAction extends AbstractArchitectAction {
 	
 	private final static String icon_name = "edit_schema";
 	
+	private boolean success;
+	
 	public EditPlayPenSchemaAction(ArchitectFrame frame) {
         super(frame,
                 Messages.getString("EditPlayPenSchemaAction.name"), //$NON-NLS-1$
@@ -60,8 +64,20 @@ public class EditPlayPenSchemaAction extends AbstractArchitectAction {
 	}
 
 	public void actionPerformed(ActionEvent evt) {
+        SQLDatabase db = getSession().getTargetDatabase();
+        db.begin("Edit a schema");
+        singleActionPerformed(evt);
+        if (success) {
+            db.commit();
+        } else {
+            db.rollback("No change for schema name.");
+        }
+	}
+	
+	public void singleActionPerformed(ActionEvent evt) {
         logger.debug("edit a schema action detected!"); //$NON-NLS-1$
         logger.debug("ACTION COMMAND: " + evt.getActionCommand()); //$NON-NLS-1$
+        success = false;
 
         if (evt.getActionCommand().equals(DBTree.ACTION_COMMAND_SRC_DBTREE)){
 			TreePath [] selections = getSession().getDBTree().getSelectionPaths();
@@ -87,6 +103,11 @@ public class EditPlayPenSchemaAction extends AbstractArchitectAction {
 							JOptionPane.ERROR_MESSAGE);
 				}
 			}
+		} else if (evt.getActionCommand().equals(PlayPen.ACTION_COMMAND_SRC_PLAYPEN)) {
+		    if (evt.getSource() instanceof AcrossedSchemaPane) {
+		        AcrossedSchemaPane asp = (AcrossedSchemaPane)evt.getSource();
+		        editSchema(asp.getAcrossedSchema());
+		    }
 		}
 	}
 	
@@ -105,7 +126,7 @@ public class EditPlayPenSchemaAction extends AbstractArchitectAction {
         while( input ){
 	        schemaName = (String) JOptionPane.showInputDialog(frame, 
 	        		Messages.getString("PlayPenSchemaAction.label"),
-	        		Messages.getString("Action.schemaDialogTitle"), 
+	        		Messages.getString("PlayPenSchemaAction.schemaDialogTitle"), 
 	        		JOptionPane.PLAIN_MESSAGE,
 	        		icon,
 	        		null, schemaName);
@@ -121,15 +142,18 @@ public class EditPlayPenSchemaAction extends AbstractArchitectAction {
 			    					JOptionPane.ERROR_MESSAGE);
 		    			} else {
 		    				input = false;
+		    				success = false;
 		    			}
 		    		} else {
 		    			schema.setName(schemaName);
 		    			schema.setPhysicalName(schemaName);
 		    			input = ( db.getPlayPenSchema(schemaName) == null );
+		    			success = true;
 		    		}
 		        }
 	        } else {
 	        	input = false;
+	        	success = false;
 	        }
         }		
 	}

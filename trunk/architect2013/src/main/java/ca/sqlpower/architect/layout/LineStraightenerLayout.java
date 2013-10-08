@@ -27,6 +27,7 @@ import org.apache.log4j.Logger;
 
 import ca.sqlpower.architect.swingui.BasicRelationshipUI;
 import ca.sqlpower.architect.swingui.Relationship;
+import ca.sqlpower.architect.swingui.RelationshipConnectible;
 import ca.sqlpower.architect.swingui.RelationshipUI;
 import ca.sqlpower.architect.swingui.TablePane;
 
@@ -80,9 +81,9 @@ public class LineStraightenerLayout extends AbstractLayout {
     }
 
     private void attemptToStraighten(Relationship r) {
-        TablePane tp1 = r.getPkTable();
-        TablePane tp2 = r.getFkTable();
-        int orientation = r.getOrientation();
+        RelationshipConnectible tp1 = r.getRelationshipConnectible(true);
+        RelationshipConnectible tp2 = r.getRelationshipConnectible(false);
+        int orientation = r.getOrientation2();
 
         if (logger.isDebugEnabled()) {
             logger.debug("PK Table is at " + tp1.getBounds());

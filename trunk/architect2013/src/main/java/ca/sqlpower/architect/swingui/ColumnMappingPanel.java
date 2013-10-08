@@ -330,8 +330,8 @@ public class ColumnMappingPanel extends ChangeListeningDataEntryPanel implements
         this.session = session;
         this.r = r;
         PlayPen pp = new PlayPen(session);
-        lhsTable = new TablePane(r.getPkTable(), pp.getContentPane());
-        rhsTable = new TablePane(r.getFkTable(), pp.getContentPane());
+        lhsTable = new TablePane(r.getPkTable(), pp.getContentPane(), true);
+        rhsTable = new TablePane(r.getFkTable(), pp.getContentPane(), true);
         pp.getContentPane().addChild(lhsTable, 0);
         pp.getContentPane().addChild(rhsTable, 0);
         SQLPowerUtils.listenToHierarchy(lhsTable.getModel().getParent(), this);

@@ -75,7 +75,7 @@ public class TestArchitectUndoManager extends TestCase {
         private Point[] connectionPoints = {new Point(10,10), new Point(100,100)};
 
         @Override
-        public Object getModel() {
+        public SPObject getModel() {
             return null;
         }
 

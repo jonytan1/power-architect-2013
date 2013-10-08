@@ -434,7 +434,7 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
         final SPListener settingsListener = new AbstractSPListener() {
             public void propertyChanged(PropertyChangeEvent evt) {
                 getPlayPen().updateTablePanes();
-                getPlayPen().repaint();
+                getPlayPen().repaintCurrentSchema();
             }
         };
         getWorkspace().addSPListener(new AbstractSPListener() {
