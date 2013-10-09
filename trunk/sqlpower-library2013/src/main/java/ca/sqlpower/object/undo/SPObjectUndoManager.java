@@ -39,6 +39,7 @@ import ca.sqlpower.object.SPChildEvent;
 import ca.sqlpower.object.SPListener;
 import ca.sqlpower.object.SPObject;
 import ca.sqlpower.sqlobject.SQLDatabase;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.util.SQLPowerUtils;
 import ca.sqlpower.util.TransactionEvent;
 
@@ -327,6 +328,10 @@ public class SPObjectUndoManager extends UndoManager implements NotifyingUndoMan
             if (e.getSource() instanceof SQLDatabase && 
             		e.getPropertyName().equals("shortDisplayName")) {
                 // this is not undoable at this time.
+            } else if (e.getSource() instanceof SQLSchema && 
+                    e.getPropertyName().equals("sortComparator")) {
+                // This is an one-way operation.
+                SPObjectUndoManager.this.discardAllEdits();
             } else {
                 SPObjectPropertyChangeUndoableEdit undoEvent = 
                 	new SPObjectPropertyChangeUndoableEdit(e);
