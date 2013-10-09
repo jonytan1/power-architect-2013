@@ -1534,6 +1534,10 @@ public class ArchitectFrame extends JFrame {
         return insertColumnAction;
     }
 
+    public UndoAction getUndoAction() {
+        return undoAction;
+    }
+    
     /**
      * Returns the action that edits the index which is currently selected in
      * the DBTree. For PlayPen purposes, see {@link EditSpecificIndexAction}.

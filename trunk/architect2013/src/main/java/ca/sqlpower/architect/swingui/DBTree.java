@@ -1349,6 +1349,7 @@ public class DBTree extends JTree implements DragSourceListener {
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
                         sortedSchema.setSortComparator(type);
+                        session.getArchitectFrame().getUndoAction().updateSettingsFromManager();
                         model.refreshTreePath(tp);
                     }
                 });
