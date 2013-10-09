@@ -392,6 +392,7 @@ public class SQLSchema extends SQLObject {
 	@NonProperty
 	public void setSortComparator(SQLObjectSortComparator.Type type){
 		tables.setSortComparator(type);
+		this.firePropertyChange("sortComparator", null, type);
 	}
 	
 	@NonProperty
