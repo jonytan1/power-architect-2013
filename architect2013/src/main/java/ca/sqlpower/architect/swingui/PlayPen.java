@@ -1716,32 +1716,6 @@ public class PlayPen extends JPanel
 		SQLPowerUtils.unlistenToHierarchy(sqlObject, this);
 	}
 
-	/*public class PlayPenMirror extends AbstractSPObjectAdapter {
-	    private final PlayPen playPen;
-
-	    public PlayPenMirror() {
-	        this(null);
-	    }
-	    
-	    public PlayPenMirror(PlayPen playPen) {
-	        super(SQLSchema.class);
-	        this.playPen = playPen;
-	    }
-	    
-	    public void addChildAdapter(Object child) throws SQLObjectException {
-	        playPen.addTabbedSchema((SQLSchema)child);
-	    }
-	    
-	    public void removeChildAdapter(Object child)
-	            throws ObjectDependentException, SQLObjectException {
-	        playPen.removeTabbedSchema((SQLSchema)child);
-	    }
-        
-	    public String toString() {
-            return "TabbedSchemaMirro";
-        }
-	}*/
-	
 	private PlayPenMirror playPenMirror = new PlayPenMirror(this);
 	
 	public void initMirror(SPListener l) {
@@ -1780,6 +1754,7 @@ public class PlayPen extends JPanel
             } else if (child instanceof SQLSchema){
                 fireEvent = false;
                 playPenMirror.addChildWithAdapter(child);
+                addAcrossedSchemaPane((SQLSchema)child);
                 return;
             }
         } catch (SQLObjectException ex) {
@@ -1835,6 +1810,7 @@ public class PlayPen extends JPanel
             } else if (child instanceof SQLSchema){
                 foundRemovedComponent = false;
                 playPenMirror.removeChildWithAdapter(child);
+                removeAcrossedSchemaPane((SQLSchema)child);
                 return;
 		    }
 		} catch (ObjectDependentException ex) {
@@ -4045,14 +4021,18 @@ public class PlayPen extends JPanel
     	this.tabbedPane.addTab(schema.getName(), 
         		SPSUtils.createIcon("new_schema", schema.getName(), ArchitectSwingSessionContext.ICON_SIZE), 
         		tabbedSchema);
-    	Iterator<TabbedSchema> it = schemas.values().iterator();
-    	while (it.hasNext()){
-    	    TabbedSchema sch = it.next();
-            this.contentPane.addChild(new AcrossedSchemaPane(tabbedSchema.model, sch.model, this.contentPane), 0);
-            this.contentPane.addChild(new AcrossedSchemaPane(sch.model, tabbedSchema.model, this.contentPane), 0);
-    	}
         schemas.put(tabbedSchema.getUUID(), tabbedSchema);
         schema.addSPListener(schemaNameListener);
+    }
+    
+    public void addAcrossedSchemaPane(SQLSchema schema) throws SQLObjectException {
+        Iterator<TabbedSchema> it = schemas.values().iterator();
+        while (it.hasNext()){
+            TabbedSchema sch = it.next();
+            if (sch.model == schema) continue;
+            this.contentPane.addChild(new AcrossedSchemaPane(schema, sch.model, this.contentPane), 0);
+            this.contentPane.addChild(new AcrossedSchemaPane(sch.model, schema, this.contentPane), 0);
+        }
     }
     
     public void removeTabbedSchema(SQLSchema schema) throws ObjectDependentException {
@@ -4063,12 +4043,6 @@ public class PlayPen extends JPanel
     	this.tabbedPane.remove(tabbedSchema);
     	schemas.remove(tabbedSchema.getUUID());
     	schema.removeSPListener(schemaNameListener);
-        Iterator<TabbedSchema> it = schemas.values().iterator();
-        while (it.hasNext()){
-            TabbedSchema sch = it.next();
-            this.contentPane.removeChild(getAcrossedSchemaPane(tabbedSchema.model, sch.model));
-            this.contentPane.removeChild(getAcrossedSchemaPane(sch.model, tabbedSchema.model));
-        }
         if (schemas.isEmpty()) {
             this.tabbedPane.removeMouseListener(tabbedPaneMouseListener);
             this.tabbedPane.addMouseListener(ppMouseListener);
@@ -4076,6 +4050,16 @@ public class PlayPen extends JPanel
         }
     }
     
+    public void removeAcrossedSchemaPane(SQLSchema schema) throws ObjectDependentException {
+        Iterator<TabbedSchema> it = schemas.values().iterator();
+        while (it.hasNext()){
+            TabbedSchema sch = it.next();
+            if (sch.model == schema) continue;
+            this.contentPane.removeChild(getAcrossedSchemaPane(schema, sch.model));
+            this.contentPane.removeChild(getAcrossedSchemaPane(sch.model, schema));
+        }
+    }
+
     /**
      * Get the acrossed schema pane related "acrossedSchema" that display in
      * the "model" tab schema pane of PlayPen.
