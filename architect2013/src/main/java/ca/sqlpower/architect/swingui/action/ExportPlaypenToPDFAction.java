@@ -18,6 +18,8 @@
  */
 package ca.sqlpower.architect.swingui.action;
 
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.io.BufferedOutputStream;
@@ -25,8 +27,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Map;
 
+import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
@@ -39,11 +43,19 @@ import ca.sqlpower.architect.swingui.ArchitectSwingSession;
 import ca.sqlpower.architect.swingui.PlayPen;
 import ca.sqlpower.architect.swingui.PlayPenComponent;
 import ca.sqlpower.architect.swingui.PlayPenContentPane;
+import ca.sqlpower.architect.swingui.Relationship;
+import ca.sqlpower.sqlobject.SQLSchema;
 import ca.sqlpower.swingui.SPSUtils;
 import ca.sqlpower.util.MonitorableImpl;
 
+import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
+import com.lowagie.text.Element;
+import com.lowagie.text.Image;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.ColumnText;
 import com.lowagie.text.pdf.PdfContentByte;
 import com.lowagie.text.pdf.PdfWriter;
 
@@ -53,6 +65,8 @@ public class ExportPlaypenToPDFAction extends ProgressAction {
     private static final String FILE_KEY = "FILE_KEY"; //$NON-NLS-1$
     
     private static int OUTSIDE_PADDING = 10;
+    
+    private static int FONT_HEIGHT = 20;
 
     /**
      * A snapshot of the play pen. This play pen will look exactly like the play
@@ -159,15 +173,13 @@ public class ExportPlaypenToPDFAction extends ProgressAction {
          * we multiply by 2 so we can accomodate the translate and ensure
          * nothing gets drawn outside of the document size.
          */
-        final int width = pp.getBounds().width + 2*OUTSIDE_PADDING;
-        final int height = pp.getBounds().height + 2*OUTSIDE_PADDING;
-        final Rectangle ppSize = new Rectangle(width, height);
         
         OutputStream out = null;
         Document d = null;
+        ImageIcon icon = SPSUtils.createIcon("new_schema", "Schema", 16);
         try {
             out = new BufferedOutputStream(new FileOutputStream((File)properties.get(FILE_KEY)));
-            d = new Document(ppSize);
+            d = new Document();
             
             d.addTitle(Messages.getString("ExportPlaypenToPDFAction.PdfTitle")); //$NON-NLS-1$
             d.addAuthor(System.getProperty("user.name")); //$NON-NLS-1$
@@ -175,25 +187,60 @@ public class ExportPlaypenToPDFAction extends ProgressAction {
             
             PdfWriter writer = PdfWriter.getInstance(d, out);
             d.open();
-            PdfContentByte cb = writer.getDirectContent();
-            Graphics2D g = cb.createGraphicsShapes(width, height);
-            // ensure a margin
-            g.translate(OUTSIDE_PADDING, OUTSIDE_PADDING);
             PlayPenContentPane contentPane = pp.getContentPane();
-            for (int i = 0; i < contentPane.getChildren().size(); i++) {
-                PlayPenComponent ppc = contentPane.getChildren().get(i);
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Painting component " + ppc);
-                }
-                g.translate(ppc.getLocation().x, ppc.getLocation().y);
+            List<SQLSchema> schemas = pp.findAllSchema();
+            for (int j = 0; j < schemas.size(); j++) {
+                pp.selectTabbedSchema(schemas.get(j));
+                Dimension dim = pp.getContentDimension(schemas.get(j));
+                final int width = ((int)dim.width) + 2*OUTSIDE_PADDING;
+                final int height = (int)dim.height + 2*OUTSIDE_PADDING + FONT_HEIGHT;
+                final Rectangle ppSize = new Rectangle(width, height);
+                d.setPageSize(ppSize);
+                d.newPage();
+                
+                PdfContentByte cb = writer.getDirectContentUnder();
+                
+                int titleX = (width - OUTSIDE_PADDING)/2;
+                int titleY = height - OUTSIDE_PADDING - FONT_HEIGHT;
+
+                Image img = Image.getInstance(icon.getImage(), null);
+                img.setAbsolutePosition(titleX - icon.getIconWidth() - 5, titleY + 1);
+                cb.addImage(img);
+                
+                Phrase p = new Phrase(schemas.get(j).getName());
+                ColumnText.showTextAligned(cb, Element.ALIGN_LEFT, p, titleX, titleY + 4, 0);
+                
+                Graphics2D g = cb.createGraphicsShapes(width, height);
+                // ensure a margin
+                g.translate(OUTSIDE_PADDING, OUTSIDE_PADDING + FONT_HEIGHT);
                 Font gFont = g.getFont();
-                ppc.paint(g);
+                g.setColor(Color.black);
+                g.fillRect(OUTSIDE_PADDING, 0, width - 4 * OUTSIDE_PADDING, 1);
                 g.setFont(gFont);
-                g.translate(-ppc.getLocation().x, -ppc.getLocation().y);
-                monitor.setProgress(i);
+
+                List<? extends PlayPenComponent> ppcList = contentPane.getAllChildrenOfSchema(schemas.get(j));
+                for (int i = 0; i < ppcList.size(); i++) {
+                    PlayPenComponent ppc = ppcList.get(i);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Painting component " + ppc);
+                    }
+                    g.translate(ppc.getLocation().x, ppc.getLocation().y);
+                    gFont = g.getFont();
+                    if (ppc instanceof Relationship) {
+                        ((Relationship)ppc).paint(schemas.get(j), g);
+                    } else {
+                        ppc.paint(g);
+                    }
+                    
+                    g.setFont(gFont);
+                    g.translate(-ppc.getLocation().x, -ppc.getLocation().y);
+                    monitor.setProgress(i);
+                }
+                pp.paintComponent(schemas.get(j), g);
+                g.dispose();
             }
-            pp.paintComponent(g);
-            g.dispose();
+            
+            
         } catch (Exception ex) {
             ASUtils.showExceptionDialog(getSession(), 
                     Messages.getString("ExportPlaypenToPDFAction.couldNotExportPlaypen"),  //$NON-NLS-1$

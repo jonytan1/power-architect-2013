@@ -341,6 +341,14 @@ public class PlayPen extends JPanel
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 	}
+	
+    public void paintComponent(SQLSchema schema, Graphics2D g) {
+        TabbedSchema ts = getTabbedSchema(schema);
+        if (ts != null) {
+            ts.paintGraphics(g);
+        }
+        super.paintComponent(g);
+    }
 
 	/**
 	 * Delegates to the content pane.
@@ -631,6 +639,9 @@ public class PlayPen extends JPanel
 		    if (ppc instanceof TablePane) {
 		        TablePane tp = (TablePane) ppc;
 		        addImpl(new TablePane(tp, contentPane), ppc.getPreferredLocation());
+            } else if (ppc instanceof AcrossedSchemaPane) {
+                AcrossedSchemaPane asp = (AcrossedSchemaPane) ppc;
+                addImpl(new AcrossedSchemaPane(asp, contentPane), ppc.getPreferredLocation());                
 		    } else if (ppc instanceof Relationship) {
 		        Relationship rel = (Relationship) ppc;
 		        addImpl(new Relationship(rel, contentPane), ppc.getPreferredLocation());			    
@@ -3696,6 +3707,18 @@ public class PlayPen extends JPanel
         public void scrollRectToVisibleForSchema(Rectangle aRect) {
             this.tabbedSchemaPanel.scrollRectToVisible(aRect);
         }
+        
+        public void paintGraphics(Graphics2D g) {
+            this.tabbedSchemaPanel.paintComponent(g);
+        }
+        
+        public Dimension  getContentDimension() {
+            return this.tabbedSchemaPanel.getMyDimension();
+        }
+
+        public String toString() {
+            return "Model " + model + " (SQLSchema)";
+        }
     }
     
     private class TabbedSchemaPanel extends JPanel {
@@ -3707,6 +3730,7 @@ public class PlayPen extends JPanel
 		private final SQLSchema model;
 		private final PlayPen owner;
 		private boolean normalizing;
+		private Dimension myDimension = new Dimension();
 
 		public TabbedSchemaPanel(SQLSchema model, PlayPen owner) {
 			this.model = model;
@@ -3762,8 +3786,13 @@ public class PlayPen extends JPanel
        	        return usedSpace;
        	    }
        	}
-           
-       public Dimension getUsedArea() {
+        
+       	private Dimension getMyDimension() {
+       	    getUsedArea();
+       	    return myDimension;
+       	}
+       	
+        public Dimension getUsedArea() {
        	    Rectangle cbounds = null;
        	    int minx = 0, miny = 0, maxx = 0, maxy = 0;
        	    for (PlayPenComponent c : this.owner.contentPane.getAllChildrenOfSchema(this.model)) {
@@ -3773,6 +3802,8 @@ public class PlayPen extends JPanel
        	        maxx = Math.max(cbounds.x + cbounds.width , maxx);
        	        maxy = Math.max(cbounds.y + cbounds.height, maxy);
        	    }
+            myDimension.height = Math.max(maxy - miny, this.getMinimumSize().height);
+            myDimension.width = Math.max(maxx - minx, this.getMinimumSize().width);
 
        	    return new Dimension((int) ((double) Math.max(maxx - minx, this.getMinimumSize().width) * this.owner.zoom),
        	            (int) ((double) Math.max(maxy - miny, this.getMinimumSize().height) * this.owner.zoom));
@@ -3984,6 +4015,14 @@ public class PlayPen extends JPanel
     	Component c = tabbedPane.getSelectedComponent();
     	if (c instanceof TabbedSchema) return (TabbedSchema)c;
     	return null;
+    }
+    
+    public void selectTabbedSchema(SQLSchema schema) {
+        if (schema == null) return;
+        TabbedSchema ts = getTabbedSchema(schema);
+        if (ts != null) {
+            this.tabbedPane.setSelectedComponent(ts);
+        }
     }
     
     public SQLSchema getModelOfCurrentTab() {
@@ -4261,5 +4300,22 @@ public class PlayPen extends JPanel
             }
         }
         return fullName.toLowerCase();
+    }
+    
+    public List<SQLSchema> findAllSchema() {
+        List<SQLSchema> list = new ArrayList<SQLSchema>(this.schemas.size());
+        Iterator<TabbedSchema> it = schemas.values().iterator();
+        while (it.hasNext()){
+            list.add(it.next().model);
+        }
+        return list;
+    }
+    
+    public Dimension getContentDimension(SQLSchema schema) {
+        TabbedSchema tabbedSchema = this.getTabbedSchema(schema);
+        if (tabbedSchema != null) {
+            return tabbedSchema.getContentDimension();
+        }
+        return super.getSize();
     }
 }
