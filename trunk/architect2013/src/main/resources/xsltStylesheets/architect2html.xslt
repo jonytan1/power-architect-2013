@@ -106,6 +106,7 @@
   </head>
   <body>
     <xsl:call-template name="create-toc"/>
+    <xsl:call-template name="create-schema-toc"/>
     <xsl:call-template name="table-definitions"/>
   </body>
   </html>
@@ -125,24 +126,44 @@
 
 <xsl:template name="create-toc">
     <center><h2><xsl:call-template name="write-name"/></h2></center>
-    <h3><xsl:text>List of tables</xsl:text></h3>
+    <h3><xsl:text>List of schemas</xsl:text></h3>
     
     <ul>
-      <xsl:for-each select="/architect-project/target-database/table">
+      <xsl:for-each select="/architect-project/target-database/schema">
         <xsl:sort select="@name"/>
         <li>
-          <xsl:variable name="table" select="@name"/>
-          <a href="#{$table}"><xsl:value-of select="$table"/></a>
+          <xsl:variable name="schema" select="@name"/>
+          <a href="#{$schema}"><xsl:value-of select="$schema"/></a>
         </li>
       </xsl:for-each>
     </ul>
     
 </xsl:template>
 
+<xsl:template name="create-schema-toc">
+     <xsl:for-each select="/architect-project/target-database/schema">
+     <xsl:variable name="schema" select="@name"/>
+    <h3><xsl:text>List of tables in schema </xsl:text><xsl:value-of select="$schema"/><a name="{$schema}"></a></h3>
+    
+    <ul>
+      <xsl:for-each select="/architect-project/target-database/schema/table">
+        <xsl:sort select="@name"/>
+        <li>
+          <xsl:variable name="table" select="@name"/>
+          <a href="#{$schema}.{$table}"><xsl:value-of select="$table"/></a>
+        </li>
+      </xsl:for-each>
+    </ul>
+     </xsl:for-each>
+    
+</xsl:template>
 
 <xsl:template name="table-definitions">
 
-  <xsl:for-each select="/architect-project/target-database/table">
+  <xsl:for-each select="/architect-project/target-database/schema">
+  <xsl:variable name="schema" select="@name"/>
+  <xsl:sort select="@name"/>
+  <xsl:for-each select="/architect-project/target-database/schema/table">
 
     <xsl:sort select="@name"/>
     <xsl:variable name="table" select="@name"/>
@@ -150,8 +171,8 @@
     <xsl:variable name="physicalName" select="@physicalName"/>
     <div class="tableNameHeading">
       <h1>
-        <xsl:value-of select="$table"/>
-        <a name="{$table}"></a>
+        <xsl:value-of select="$schema"/>.<xsl:value-of select="$table"/>
+        <a name="{$schema}.{$table}"></a>
       </h1>
       <h2>
       (Physical Name: <xsl:value-of select="$physicalName"/>)
@@ -183,8 +204,9 @@
               </xsl:if>
               <xsl:for-each select="/architect-project/target-database/relationships/relationship[@fk-table-ref=$table-id]/column-mapping[@fk-column-ref=$col-id]">
                 <xsl:variable name="pk-id" select="../@pk-table-ref"/>
-                <xsl:variable name="targetTable" select="/architect-project/target-database/table[@id=$pk-id]/@name"/>
-                &#160;(<a href="#{$targetTable}"><xsl:value-of select="'FK'"/></a>)
+                <xsl:variable name="targetSchema" select="/architect-project/target-database/schema/table[@id=$pk-id]/../@name"/>
+                <xsl:variable name="targetTable" select="/architect-project/target-database/schema/table[@id=$pk-id]/@name"/>
+                &#160;(<a href="#{$targetSchema}.{$targetTable}"><xsl:value-of select="'FK'"/></a>)
               </xsl:for-each>
             </td>
             <td class="tdTableDefinition"><xsl:value-of select="@physicalName"/></td>
@@ -222,9 +244,19 @@
           <ul>
           <xsl:for-each select="/architect-project/target-database/relationships/relationship[@fk-table-ref=$table-id]">
             <xsl:variable name="pk-id" select="@pk-table-ref"/>
-            <xsl:variable name="targetTable" select="/architect-project/target-database/table[@id=$pk-id]/@name"/>
+            <xsl:variable name="targetSchema" select="/architect-project/target-database/schema/table[@id=$pk-id]/../@name"/>
+            <xsl:variable name="targetTable" select="/architect-project/target-database/schema/table[@id=$pk-id]/@name"/>
             <li>
-              <a href="#{$targetTable}"><xsl:value-of select="$targetTable"/></a><xsl:text> through (</xsl:text>
+              <a href="#{$targetSchema}.{$targetTable}">
+              <xsl:choose>
+                <xsl:when test="$targetSchema = $schema">
+                    <xsl:value-of select="$targetTable"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="$targetSchema"/>.<xsl:value-of select="$targetTable"/>
+                </xsl:otherwise>
+              </xsl:choose>
+              </a><xsl:text> through (</xsl:text>
               <xsl:for-each select="column-mapping">
                 <xsl:variable name="fk-col-id" select="@fk-column-ref"/>
                 <xsl:variable name="fk-col-name" select="//column[@id=$fk-col-id]/@name"/>
@@ -241,8 +273,18 @@
           <ul>
           <xsl:for-each select="/architect-project/target-database/relationships/relationship[@pk-table-ref=$table-id]">
             <xsl:variable name="fk-id" select="@fk-table-ref"/>
-            <xsl:variable name="targetTable" select="/architect-project/target-database/table[@id=$fk-id]/@name"/>
-            <li><a href="#{$targetTable}"><xsl:value-of select="$targetTable"/></a><xsl:text> referencing (</xsl:text>
+            <xsl:variable name="targetSchema" select="/architect-project/target-database/schema/table[@id=$fk-id]/../@name"/>
+            <xsl:variable name="targetTable" select="/architect-project/target-database/schema/table[@id=$fk-id]/@name"/>
+            <li><a href="#{$targetSchema}.{$targetTable}">
+              <xsl:choose>
+                <xsl:when test="$targetSchema = $schema">
+                    <xsl:value-of select="$targetTable"/>
+                </xsl:when>
+                <xsl:otherwise>
+                    <xsl:value-of select="$targetSchema"/>.<xsl:value-of select="$targetTable"/>
+                </xsl:otherwise>
+              </xsl:choose>
+            </a><xsl:text> referencing (</xsl:text>
             <xsl:for-each select="column-mapping">
               <xsl:variable name="pk-col-id" select="@pk-column-ref"/>
               <xsl:variable name="pk-col-name" select="//column[@id=$pk-col-id]/@name"/>
@@ -255,6 +297,7 @@
       </xsl:if>
       </div>
     </div>
+  </xsl:for-each>
   </xsl:for-each>
 
 </xsl:template>
