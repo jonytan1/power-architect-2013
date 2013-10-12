@@ -10,6 +10,56 @@ import org.apache.log4j.Logger;
 
 import ca.sqlpower.sqlobject.SQLObjectException;
 
+/**
+ * This is an abstract adapter class for SPObject/non-SPObject object 
+ * to support undo/re-do operation of adding a child and removing a child.<br>
+ * This is an example for {@link ca.sqlpower.architect.swingui.PlayPen} to 
+ * support undo/re-do of adding a SQLSchema object and removing a SQLSchema object.<br>
+ * <blockquote><pre>
+ * public class PlayPenMirror extends AbstractSPObjectAdapter {
+ *     private final PlayPen playPen;
+ *     ... ...
+ *     public PlayPenMirror(PlayPen playPen) {
+ *         super(SQLSchema.class);      //Add or remove a SQLSchema object to/from playPen.
+ *         this.playPen = playPen;
+ *     }
+ *
+ *     public void addChildAdapter(Object child) throws SQLObjectException {
+ *         ... ...   // Do something for playPen when adding a SQLSchema object.
+ *     }
+ *
+ *     public void removeChildAdapter(Object child) {
+ *         ... ...   // Do something for playPen when removing a SQLSchema object.
+ *     }
+ *     ... ...
+ * }
+ * </pre></blockquote>
+ * In {@link ca.sqlpower.architect.undo.ArchitectUndoManager}:
+ * <blockquote><pre>
+ * playPen.initMirror(eventAdapter);
+ * </pre></blockquote>
+ * In {@link ca.sqlpower.architect.swingui.PlayPen}:
+ * <blockquote><pre>
+ * public void initMirror(SPListener l) {
+ *     playPenMirror.addSPListener(l);
+ * }
+ * ... ...
+ * public void childAdded(SPChildEvent e) {
+ *     ... ...
+ *     playPenMirror.addChildWithAdapter(child);    //child is a SQLSchema object.
+ *     ... ...
+ * }
+ * ... ...
+ * public void childRemoved(SPChildEvent e) {
+ *     ... ...
+ *     playPenMirror.removeChildWithAdapter(child);    //child is a SQLSchema object.
+ *     ... ...
+ * }
+ * </pre></blockquote>
+ * 
+ * @author jianjun.tan
+ *
+ */
 public abstract class AbstractSPObjectAdapter extends AbstractSPObject {
     private static Logger logger = Logger.getLogger(AbstractSPObjectAdapter.class);
     

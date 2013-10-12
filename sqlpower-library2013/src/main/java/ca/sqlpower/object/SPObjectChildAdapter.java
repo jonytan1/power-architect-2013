@@ -3,6 +3,13 @@ package ca.sqlpower.object;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * This is an adapter class for the child of sub class of AbstractSPObjectAdapter.
+ * The child may be an any-object.
+ * 
+ * @author jianjun.tan
+ *
+ */
 public class SPObjectChildAdapter extends AbstractSPObject{
 
     public final List<Class<? extends SPObject>> allowedChildTypes = Collections.emptyList();
