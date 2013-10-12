@@ -10,6 +10,13 @@ import ca.sqlpower.object.SPObjectChildAdapter;
 import ca.sqlpower.sqlobject.SQLObjectException;
 import ca.sqlpower.sqlobject.SQLSchema;
 
+/**
+ * This is a adapter class for PlayPen to support undo/re-do operation of 
+ * adding a SQLSchema child and removing a SQLSchema child.
+ * 
+ * @author jianjun.tan
+ *
+ */
 public class PlayPenMirror extends AbstractSPObjectAdapter {
     private final PlayPen playPen;
     public static List<Class<? extends SPObject>> allowedChildTypes =
