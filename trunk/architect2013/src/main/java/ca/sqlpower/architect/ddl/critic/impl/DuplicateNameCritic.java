@@ -116,7 +116,7 @@ public class DuplicateNameCritic extends CriticAndSettings {
                 subject instanceof SQLIndex || subject instanceof SQLColumn) {
             final SQLObject obj = (SQLObject) subject;
             String physicalName = obj.getPhysicalName();
-            if (obj instanceof SQLColumn) {
+            if (obj instanceof SQLColumn && ((SQLColumn) obj).isAutoIncrement()) {
                 physicalName = ((SQLColumn) obj).getAutoIncrementSequenceName();
             }
             final Collection<SQLObject> sameNameObjects = topLevelPhysicalNameMap.get(physicalName);
@@ -131,7 +131,7 @@ public class DuplicateNameCritic extends CriticAndSettings {
                                 FixType.QUICK_FIX) {
                             @Override
                             public void apply() {
-                                if (obj instanceof SQLColumn) {
+                                if (obj instanceof SQLColumn && ((SQLColumn) obj).isAutoIncrement()) {
                                     ((SQLColumn) obj).setAutoIncrementSequenceName(newPhysicalName);
                                 } else {
                                     obj.setPhysicalName(newPhysicalName);
