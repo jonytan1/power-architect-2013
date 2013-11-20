@@ -115,31 +115,40 @@ public class DuplicateNameCritic extends CriticAndSettings {
         if (subject instanceof SQLTable || subject instanceof SQLRelationship || 
                 subject instanceof SQLIndex || subject instanceof SQLColumn) {
             final SQLObject obj = (SQLObject) subject;
+            // 1. needCheck = true for SQLTable, SQLRelationship, SQLIndex;
+            // 2. needCheck = true for SQLColumn that is "AutoIncrement".
+            // 3. needCheck = false for SQLColumn that is not "AutoIncrement".
+            boolean needCheck = true;
             String physicalName = obj.getPhysicalName();
-            if (obj instanceof SQLColumn && ((SQLColumn) obj).isAutoIncrement()) {
-                physicalName = ((SQLColumn) obj).getAutoIncrementSequenceName();
+            if (obj instanceof SQLColumn) {
+                needCheck = ((SQLColumn)obj).isAutoIncrement();
+                if (needCheck) {
+                    physicalName = ((SQLColumn) obj).getAutoIncrementSequenceName();
+                }
             }
-            final Collection<SQLObject> sameNameObjects = topLevelPhysicalNameMap.get(physicalName);
-            if (!sameNameObjects.isEmpty()) {
-                final String newPhysicalName = physicalName + "_" + sameNameObjects.size();
-                SQLObject duplicate = sameNameObjects.iterator().next();
-                criticisms.add(new Criticism(subject, 
-                        "Duplicate physical name \"" + physicalName + 
-                            "\". There is a " + ArchitectUtils.convertClassToString(duplicate.getClass())+ " in " + 
-                            duplicate.getParent().getName() + " with this name already.", this, 
-                        new CriticFix("Replace physical name " + obj.getPhysicalName() + " with " + newPhysicalName, 
-                                FixType.QUICK_FIX) {
-                            @Override
-                            public void apply() {
-                                if (obj instanceof SQLColumn && ((SQLColumn) obj).isAutoIncrement()) {
-                                    ((SQLColumn) obj).setAutoIncrementSequenceName(newPhysicalName);
-                                } else {
-                                    obj.setPhysicalName(newPhysicalName);
+            if (needCheck) {
+                final Collection<SQLObject> sameNameObjects = topLevelPhysicalNameMap.get(physicalName);
+                if (!sameNameObjects.isEmpty()) {
+                    final String newPhysicalName = physicalName + "_" + sameNameObjects.size();
+                    SQLObject duplicate = sameNameObjects.iterator().next();
+                    criticisms.add(new Criticism(subject, 
+                            "Duplicate2 physical name \"" + physicalName + 
+                                "\". There is a " + ArchitectUtils.convertClassToString(duplicate.getClass())+ " in " + 
+                                duplicate.getParent().getName() + " with this name already.", this, 
+                            new CriticFix("Replace physical name " + obj.getPhysicalName() + " with " + newPhysicalName, 
+                                    FixType.QUICK_FIX) {
+                                @Override
+                                public void apply() {
+                                    if (obj instanceof SQLColumn) {
+                                        ((SQLColumn) obj).setAutoIncrementSequenceName(newPhysicalName);
+                                    } else {
+                                        obj.setPhysicalName(newPhysicalName);
+                                    }
                                 }
-                            }
-                }));
+                    }));
+                }
+                topLevelPhysicalNameMap.put(physicalName, obj);
             }
-            topLevelPhysicalNameMap.put(physicalName, obj);
         }
         return criticisms;
     }
