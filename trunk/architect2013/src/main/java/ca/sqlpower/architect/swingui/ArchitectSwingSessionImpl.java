@@ -50,6 +50,7 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.ProgressMonitor;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 
@@ -477,6 +478,8 @@ public class ArchitectSwingSessionImpl implements ArchitectSwingSession {
         
         if (projectPanel == null) {
             playPenScrollPane = new JScrollPane(playPen);
+            playPenScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            playPenScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
             projectPanel = new JPanel();
             projectPanel.setLayout(new BorderLayout());
             projectPanel.add(playPenScrollPane, BorderLayout.CENTER);
